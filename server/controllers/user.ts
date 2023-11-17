@@ -65,6 +65,10 @@ export async function createUser(req: Request, res: Response) {
       });
   } catch (err) {
     if (err instanceof Error) {
+      if (err.message.includes('duplicate key')) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+
       return res.status(400).json({ error: err.message });
     }
     return res.status(500).json({ error: 'Sign up failed' });

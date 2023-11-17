@@ -11,12 +11,12 @@
 CREATE TABLE trips (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
-  destination VARCHAR(50) NOT NULL,
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  budget NUMERIC(10, 2) NOT NULL,
-  type VARCHAR(100) NOT NULL,
-  privacy_setting INTEGER NOT NULL,
+  destination VARCHAR(50),
+  start_date DATE,
+  end_date DATE,
+  budget NUMERIC(10, 2),
+  type VARCHAR(100),
+  privacy_setting VARCHAR(50) NOT NULL,
   note TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE

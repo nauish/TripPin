@@ -10,9 +10,7 @@ export default function handleResult(
     throw new Error(`${err.type}: ${err.msg}`);
   });
 
-  if (!result.isEmpty()) {
-    return res.status(400).json({ error: result.array() });
-  }
+  if (!result.isEmpty()) return res.status(400).json({ error: result.array() });
 
   return next();
 }

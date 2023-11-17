@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import userRouter from './routes/user.js';
+import tripRouter from './routes/trip.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -14,7 +15,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(cors());
 
-app.use('/api', [userRouter]);
+app.use('/api', [userRouter, tripRouter]);
 
 app.use(errorHandler);
 

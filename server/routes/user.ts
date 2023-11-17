@@ -6,17 +6,22 @@ import authenticateJWT from '../middleware/authentication.js';
 
 const router = Router();
 
-router
-  .route('/user/signup')
-  .post([
-    body('email').isEmail().normalizeEmail(),
-    body('name').exists().notEmpty().trim(),
-    body('password').exists().notEmpty(),
-    handleResult,
-    userController.createUser,
-  ]);
+router.route('/v1/user/signup').post([
+  body('email').isEmail().normalizeEmail(),
+  body('name').exists().notEmpty().trim(),
+  body('password').exists().notEmpty().isStrongPassword({
+    minLength: 8,
+    minLowercase: 1,
+    minUppercase: 1,
+    minNumbers: 1,
+  }),
+  handleResult,
+  userController.createUser,
+]);
 
-router.route('/user/login').post(userController.loginUser);
-router.route('/user/profile').get([authenticateJWT, userController.getProfile]);
+router.route('/v1/user/login').post(userController.loginUser);
+router
+  .route('/v1/user/profile')
+  .get([authenticateJWT, userController.getProfile]);
 
 export default router;
