@@ -6,18 +6,15 @@ import authenticateJWT from '../middleware/authentication.js';
 
 const router = Router();
 
-router.route('/v1/user/signup').post([
-  body('email').isEmail().normalizeEmail(),
-  body('name').exists().notEmpty().trim(),
-  body('password').exists().notEmpty().isStrongPassword({
-    minLength: 8,
-    minLowercase: 1,
-    minUppercase: 1,
-    minNumbers: 1,
-  }),
-  handleResult,
-  userController.createUser,
-]);
+router
+  .route('/v1/user/signup')
+  .post([
+    body('email').isEmail().normalizeEmail(),
+    body('name').exists().notEmpty().trim(),
+    body('password').exists().notEmpty().isLength({ min: 6 }),
+    handleResult,
+    userController.createUser,
+  ]);
 
 router.route('/v1/user/login').post(userController.loginUser);
 router

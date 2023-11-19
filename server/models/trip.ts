@@ -14,6 +14,16 @@ import pool from './dbPools.js';
 //   note: z.string().nullable(),
 // });
 
+/**
+  CREATE TABLE attendees (
+  id BIGSERIAL PRIMARY KEY,
+  trip_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+ */
+
 export async function insertTrip(trip: {
   user_id: number;
   name: string;
@@ -59,5 +69,36 @@ export async function selectTripById(id: number) {
     [id],
   );
 
+  return results.rows;
+}
+
+export async function insertAttendee(userId: number, tripId: number) {
+  const results = await pool.query(
+    `
+    INSERT INTO attendees (trip_id, user_id) 
+    VALUES ($1, $2) RETURNING user_id
+    `,
+    [tripId, userId],
+  );
+
+  const result = results.rows[0];
+  if (result) return result;
+  throw new Error('Insert new attendee failed');
+}
+
+export async function selectAttendeesByTripId(tripId: number) {
+  const results = await pool.query(
+    `
+    SELECT
+          u.id,
+          u.name,
+          u.photo
+    FROM attendees a
+    LEFT JOIN users u
+    ON a.user_id = u.id
+    WHERE a.trip_id = $1
+    `,
+    [tripId],
+  );
   return results.rows;
 }
