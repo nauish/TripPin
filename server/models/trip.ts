@@ -102,3 +102,11 @@ export async function selectAttendeesByTripId(tripId: number) {
   );
   return results.rows;
 }
+
+export async function selectTripsByUserId(userId: number) {
+  const results = await pool.query('SELECT * FROM trips WHERE user_id = $1', [
+    userId,
+  ]);
+  const trips = results.rows;
+  return trips;
+}

@@ -4,6 +4,6 @@ import { createPlace } from '../controllers/place.js';
 
 const router = Router();
 
-router.route('/v1/place').post([authenticateJWT, createPlace]);
+router.route('/v1/places').post([authenticateJWT, createPlace]);
 
 export default router;
