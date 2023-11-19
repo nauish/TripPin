@@ -10,7 +10,7 @@ import { getTripPlaces } from '../controllers/place.js';
 
 const router = Router();
 
-router.route('/v1/trip').post([authenticateJWT, createTrip]);
+router.route('/v1/trips').post([authenticateJWT, createTrip]);
 router.route('/v1/trips/:tripId').get([getTrip]);
 router
   .route('/v1/trips/:tripId/attendees/')

@@ -4,6 +4,7 @@ import {
   insertTrip,
   selectAttendeesByTripId,
   selectTripById,
+  selectTripsByUserId,
 } from '../models/trip.js';
 
 export async function createTrip(req: Request, res: Response) {
@@ -69,6 +70,20 @@ export async function addSelfToTrip(req: Request, res: Response) {
     return res
       .status(200)
       .json({ data: { message: 'Join trip successfully' } });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function getTripsCreatedByUser(req: Request, res: Response) {
+  const { userId } = res.locals;
+
+  try {
+    const trip = await selectTripsByUserId(+userId);
+    return res.status(200).json({ trip });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });

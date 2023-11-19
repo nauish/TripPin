@@ -4,9 +4,10 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import userRouter from './routes/user.js';
-import tripRouter from './routes/trip.js';
-import placeRouter from './routes/place.js';
+import userRouter from './routes/userRouter.js';
+import authRouter from './routes/authRouter.js';
+import tripRouter from './routes/tripRouter.js';
+import placeRouter from './routes/placeRouter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -33,7 +34,7 @@ io.on('connection', (socket) => {
   });
 });
 
-app.use('/api', [userRouter, tripRouter, placeRouter]);
+app.use('/api', [userRouter, tripRouter, authRouter, placeRouter]);
 
 app.use(errorHandler);
 
