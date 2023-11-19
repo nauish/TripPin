@@ -20,9 +20,9 @@ export async function createPlace(req: Request, res: Response) {
     return res.json({ data: { tripId } });
   } catch (err) {
     if (err instanceof Error) {
-      return res.status(400).json({ message: err.message });
+      return res.status(400).json({ error: err.message });
     }
-    return res.status(500).json({ message: 'Something went wrong' });
+    return res.status(500).json({ error: 'Something went wrong' });
   }
 }
 
@@ -33,8 +33,8 @@ export async function getTripPlaces(req: Request, res: Response) {
     return res.json({ data });
   } catch (error) {
     if (error instanceof Error) {
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json({ error: error.message });
     }
-    return res.status(500).json({ message: 'Something went wrong' });
+    return res.status(500).json({ error: 'Something went wrong' });
   }
 }

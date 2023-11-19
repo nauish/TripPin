@@ -1,25 +1,43 @@
 import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import userRouter from './routes/user.js';
 import tripRouter from './routes/trip.js';
+import placeRouter from './routes/place.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
 const app = express();
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {},
+});
 const port = process.env.PORT || 3000;
 
+app.use(cors());
 app.use(cookieParser());
 app.use(express.json());
-app.use(cors());
 
-app.use('/api', [userRouter, tripRouter]);
+io.on('connection', (socket) => {
+  socket.on('joinRoom', (room) => {
+    socket.join(room);
+    io.sockets.to(room).emit('getMessage', `A user joined room ${room}`);
+  });
+  socket.on('getMessage', (message) => {
+    io.sockets.to(message.room).emit('getMessage', message.message);
+  });
+});
+
+app.use('/api', [userRouter, tripRouter, placeRouter]);
 
 app.use(errorHandler);
 
-app.listen(port, () => {
+server.listen(port, () => {
   // eslint-disable-next-line no-console
   console.log(`The Server is listening on port ${port}`);
 });

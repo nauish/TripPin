@@ -23,9 +23,9 @@ CREATE TABLE trips (
 );
 
 CREATE TABLE attendees (
-  id BIGSERIAL PRIMARY KEY,
   trip_id BIGINT NOT NULL,
   user_id BIGINT NOT NULL,
+  PRIMARY KEY (trip_id, user_id),
   FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
