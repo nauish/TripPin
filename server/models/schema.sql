@@ -73,9 +73,9 @@ CREATE TABLE saved_trips (
 CREATE TABLE chat_messages (
   id BIGSERIAL PRIMARY KEY,
   trip_id BIGINT NOT NULL,
-  sender_id BIGINT NOT NULL,
-  content TEXT NOT NULL,
-  timestamp TIMESTAMP NOT NULL,
+  user_id BIGINT NOT NULL,
+  message TEXT NOT NULL,
+  timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY (sender_id) REFERENCES users (id),
   FOREIGN KEY (trip_id) REFERENCES trips (id)
 );

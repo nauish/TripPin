@@ -34,6 +34,7 @@ const Chat = () => {
     const trimmedMessage = messageInput.trim();
     if (trimmedMessage !== '') {
       ws.emit('getMessage', {
+        id: user.id,
         username: user.name,
         room: +params.tripId,
         message: trimmedMessage,
