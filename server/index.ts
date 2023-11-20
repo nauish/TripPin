@@ -8,6 +8,7 @@ import userRouter from './routes/userRouter.js';
 import authRouter from './routes/authRouter.js';
 import tripRouter from './routes/tripRouter.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { insertChat } from './models/chat.js';
 
 dotenv.config();
 
@@ -26,16 +27,25 @@ app.use(express.json());
 io.on('connection', (socket) => {
   socket.on('joinRoom', (payload) => {
     socket.join(payload.room);
-    io.sockets.to(payload.room).emit('getMessage', {
-      username: 'server',
-      message: `${payload.name} joined trip ${payload.room} chat`,
-    });
+    // io.sockets.to(payload.room).emit('getMessage', {
+    //   username: 'server',
+    //   message: `${payload.name} joined trip ${payload.room} chat`,
+    // });
   });
-  socket.on('getMessage', (payload) => {
+  socket.on('getMessage', async (payload) => {
     io.sockets.to(payload.room).emit('getMessage', {
       username: payload.username,
       message: payload.message,
     });
+    try {
+      await insertChat(payload.message, payload.room, payload.id);
+    } catch (error) {
+      console.log(error);
+    }
+  });
+  // Synchronize marking markers on map
+  socket.on('getMarker', async (payload) => {
+    io.sockets.to(payload.room).emit('getMarker', payload);
   });
 });
 

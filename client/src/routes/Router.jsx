@@ -10,6 +10,7 @@ import RootLayout from '../layouts/RootLayout';
 import Profile from '../components/Profile';
 import ProtectedRoute from './ProtectedRoute';
 import Map from '../components/Map';
+import Places from '../components/Places';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -21,6 +22,7 @@ const router = createBrowserRouter(
           element={
             <>
               <Map />
+              <Places />
               <Chat />
             </>
           }
