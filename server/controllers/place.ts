@@ -1,10 +1,14 @@
 import { Request, Response } from 'express';
-import { insertPlace, selectPlacesByTripId } from '../models/place.js';
+import {
+  insertPlace,
+  insertPlaceToTripPlaces,
+  selectPlacesByTripId,
+} from '../models/place.js';
 
 export async function createPlace(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
-    const { name, location, markerType, type, note } = req.body;
+    const { name, location, markerType, type, note, tripId } = req.body;
     const { lat, lng } = location;
 
     const placeId = await insertPlace({
@@ -17,9 +21,20 @@ export async function createPlace(req: Request, res: Response) {
       note,
     });
 
+    if (!placeId) {
+      throw new Error('Insert new place failed');
+    }
+
+    const DEFAULT_DAY = 1;
+
+    await insertPlaceToTripPlaces(placeId, tripId, DEFAULT_DAY);
+
     return res.json({ data: { placeId } });
   } catch (err) {
     if (err instanceof Error) {
+      if (err.message.includes('duplicate key')) {
+        return res.status(400).json({ error: 'Place already in the trip' });
+      }
       return res.status(400).json({ error: err.message });
     }
     return res.status(500).json({ error: 'Something went wrong' });
