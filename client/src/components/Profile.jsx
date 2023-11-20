@@ -30,7 +30,7 @@ const Profile = () => {
     async function fetchProfileData() {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_HOST}api/v1/user/profile`,
+          `${import.meta.env.VITE_BACKEND_HOST}api/v1/users/profile`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.accessToken}`,

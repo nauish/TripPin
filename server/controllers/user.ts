@@ -105,6 +105,7 @@ export async function loginUser(req: Request, res: Response) {
           user: {
             id: user.id,
             email,
+            name: user.name,
             photo: user.photo,
             provider,
           },

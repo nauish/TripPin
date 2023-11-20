@@ -7,7 +7,6 @@ import dotenv from 'dotenv';
 import userRouter from './routes/userRouter.js';
 import authRouter from './routes/authRouter.js';
 import tripRouter from './routes/tripRouter.js';
-import placeRouter from './routes/placeRouter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -25,16 +24,22 @@ app.use(cookieParser());
 app.use(express.json());
 
 io.on('connection', (socket) => {
-  socket.on('joinRoom', (room) => {
-    socket.join(room);
-    io.sockets.to(room).emit('getMessage', `A user joined room ${room}`);
+  socket.on('joinRoom', (payload) => {
+    socket.join(payload.room);
+    io.sockets.to(payload.room).emit('getMessage', {
+      username: 'server',
+      message: `${payload.name} joined trip ${payload.room} chat`,
+    });
   });
-  socket.on('getMessage', (message) => {
-    io.sockets.to(message.room).emit('getMessage', message.message);
+  socket.on('getMessage', (payload) => {
+    io.sockets.to(payload.room).emit('getMessage', {
+      username: payload.username,
+      message: payload.message,
+    });
   });
 });
 
-app.use('/api', [userRouter, tripRouter, authRouter, placeRouter]);
+app.use('/api', [userRouter, tripRouter, authRouter]);
 
 app.use(errorHandler);
 

@@ -6,7 +6,7 @@ import {
   getTrip,
   getTripAttendees,
 } from '../controllers/trip.js';
-import { getTripPlaces } from '../controllers/place.js';
+import { createPlace, getTripPlaces } from '../controllers/place.js';
 
 const router = Router();
 
@@ -17,5 +17,6 @@ router
   .get([authenticateJWT, getTripAttendees])
   .post([authenticateJWT, addSelfToTrip]);
 router.route('/v1/trips/:tripId/places/').get([getTripPlaces]);
+router.route('/v1/trips/:tripId/places/').post([authenticateJWT, createPlace]);
 
 export default router;

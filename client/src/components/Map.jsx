@@ -1,7 +1,40 @@
+import { useState } from 'react';
 import { useEffect } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
+import { useSocket } from '../context/SocketContext';
+import { useParams } from 'react-router-dom';
 
 const Map = () => {
+  const params = useParams();
+  const socket = useSocket();
+  const [nearbyResults, setNearbyResults] = useState([]);
+
+  const { tripId } = params;
+
+  const addPlaceToTrip = async (place) => {
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: JSON.stringify({
+          name: place.name,
+          location: place.geometry.location,
+          destination: place.vicinity,
+          markerType: 'place',
+          type: place.types[0],
+          note: '',
+        }),
+      },
+    );
+
+    const data = await response.json();
+    console.log(data);
+  };
+
   useEffect(() => {
     const initMap = async () => {
       // instantiate a loader from official Google Maps js-api-loader library
@@ -30,13 +63,12 @@ const Map = () => {
         document.getElementById('autocomplete'),
       );
 
-      const marker = new Marker({
-        map: map,
-        position: { lat: -34.397, lng: 150.644 },
-      });
-
       autocomplete.addListener('place_changed', () => {
-        marker.setVisible(false);
+        const resultMarker = new Marker({
+          map: map,
+        });
+        resultMarker.setVisible(false);
+
         const place = autocomplete.getPlace();
 
         console.log(place);
@@ -49,8 +81,8 @@ const Map = () => {
         if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
         else map.panTo(place.geometry.location);
 
-        marker.setPosition(place.geometry.location);
-        marker.setVisible(true);
+        resultMarker.setPosition(place.geometry.location);
+        resultMarker.setVisible(true);
 
         const request = {
           location: place.geometry.location,
@@ -60,28 +92,30 @@ const Map = () => {
         const service = new PlacesService(map);
         service.nearbySearch(request, (results, status) => {
           console.log(results);
+          setNearbyResults(results);
           const createMarker = (place) => {
-            const marker = new Marker({
+            const nearbyMarker = new Marker({
               map: map,
               position: place.geometry.location,
             });
-            marker.addListener('click', () => {
-              infoWindow.setContent(place.name);
-              infoWindow.open(map, marker);
+
+            let nearbyInfoWindow = new InfoWindow();
+            nearbyMarker.addListener('click', () => {
+              const nearbyInfoWindowContent = `
+                <div>
+                  <h2>${place.name}</h3>
+                  <p>評分: ${place.rating}</p>
+                </div>
+              `;
+
+              nearbyInfoWindow.setContent(nearbyInfoWindowContent);
+              nearbyInfoWindow.open(map, nearbyMarker);
             });
           };
           if (status === 'OK') {
-            results.forEach((result) => {
-              const place = result;
-              createMarker(place);
-            });
+            results.forEach((result) => createMarker(result));
           }
         });
-
-        let infoWindow = new InfoWindow({
-          content: place.name,
-        });
-        infoWindow.open(map, marker);
       });
     };
 
@@ -97,6 +131,13 @@ const Map = () => {
         style={{ width: '100%' }}
       />
       <div id="map" style={{ height: '400px', width: '100%' }}></div>
+      <ul>
+        {nearbyResults.map((result, index) => (
+          <li key={index} onClick={() => addPlaceToTrip(result)}>
+            {result.name}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
