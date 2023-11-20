@@ -4,20 +4,20 @@ import { insertPlace, selectPlacesByTripId } from '../models/place.js';
 export async function createPlace(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
-    const { name, latitude, longitude, destination, markerType, type, note } =
-      req.body;
+    const { name, location, markerType, type, note } = req.body;
+    const { lat, lng } = location;
 
-    const tripId = await insertPlace({
+    const placeId = await insertPlace({
       user_id: userId,
       name,
-      latitude,
-      longitude,
-      destination,
+      latitude: lat,
+      longitude: lng,
       marker_type: markerType,
       type,
       note,
     });
-    return res.json({ data: { tripId } });
+
+    return res.json({ data: { placeId } });
   } catch (err) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });

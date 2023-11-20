@@ -17,23 +17,22 @@ import pool from './dbPools.js';
 export async function insertPlace(place: {
   user_id: number;
   name: string;
-  destination?: string;
   longitude: number;
   latitude: number;
   marker_type?: string;
   type?: string;
   note?: string;
 }) {
-  const coordinates = `POINT ${place.longitude} ${place.latitude}`;
+  const coordinates = `POINT (${place.longitude} ${place.latitude})`;
+  console.log(coordinates);
   const results = await pool.query(
     `
-    INSERT INTO places (user_id, name, destination, location, marker_type, type, note)
-    VALUES($1, $2, $3, ST_GeomFromText($4, 4326), $5, $6, $7) RETURNING id
+    INSERT INTO places (user_id, name, location, marker_type, type, note)
+    VALUES($1, $2, ST_GeomFromText($3, 4326), $4, $5, $6) RETURNING id
   `,
     [
       place.user_id,
       place.name,
-      place.destination,
       coordinates,
       place.marker_type,
       place.type,

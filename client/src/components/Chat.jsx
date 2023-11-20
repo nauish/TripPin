@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import webSocket from 'socket.io-client';
+import { useSocket } from '../context/SocketContext';
 
 const Chat = () => {
   const [ws, setWs] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
 
-  const socket = webSocket(import.meta.env.VITE_BACKEND_HOST);
+  const socket = useSocket();
   const params = useParams();
+  const user = JSON.parse(localStorage.getItem('user'));
 
   const connectToWebSocket = () => {
     setWs(socket);
@@ -22,16 +23,21 @@ const Chat = () => {
   }, [ws]);
 
   const initWebSocket = () => {
-    ws.emit('joinRoom', +params.tripId);
+    ws.emit('joinRoom', { name: user.name, room: +params.tripId });
     ws.on('getMessage', (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
+      console.log(message);
     });
   };
 
   const sendMessage = () => {
     const trimmedMessage = messageInput.trim();
     if (trimmedMessage !== '') {
-      ws.emit('getMessage', { room: +params.tripId, message: trimmedMessage });
+      ws.emit('getMessage', {
+        username: user.name,
+        room: +params.tripId,
+        message: trimmedMessage,
+      });
       setMessageInput('');
     }
   };
@@ -42,7 +48,7 @@ const Chat = () => {
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
-      event.preventDefault(); // Prevents the new line in the input field
+      event.preventDefault();
       sendMessage();
     }
   };
@@ -53,7 +59,7 @@ const Chat = () => {
         <div className="mb-4">
           {messages.map((message, index) => (
             <p key={index} className="text-gray-700 mb-2">
-              {message}
+              {message.username}: {message.message}
             </p>
           ))}
         </div>

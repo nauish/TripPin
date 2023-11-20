@@ -17,7 +17,7 @@ export default function Auth() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_HOST}api/v1/user/${endpoint}`,
+        `${import.meta.env.VITE_BACKEND_HOST}api/v1/auth/${endpoint}`,
         {
           method: 'POST',
           headers: {
@@ -36,6 +36,7 @@ export default function Auth() {
         console.error('Error:', response.status, response.statusText);
 
       const result = await response.json();
+      console.log(result);
 
       result.error
         ? setMessage(result.error)
@@ -43,6 +44,7 @@ export default function Auth() {
 
       if (result.data.access_token) {
         localStorage.setItem('accessToken', result.data.access_token);
+        localStorage.setItem('user', JSON.stringify(result.data.user));
         setTimeout(() => {
           const intendedPath = localStorage.getItem('intendedPath');
           if (intendedPath) {
@@ -117,7 +119,7 @@ export default function Auth() {
                 />
                 <div className="flex justify-between">
                   <button
-                    className="bg-stylishBlack text-white py-2 px-4 rounded-lg hover:bg-black"
+                    className="bg-black text-white py-2 px-4 rounded-lg hover:bg-black"
                     type="submit"
                     id="register-btn"
                   >
@@ -142,7 +144,7 @@ export default function Auth() {
                 className="text-3xl font-bold mb-10 text-gray-800"
                 id="login-form"
               >
-                登入 STYLiSH
+                登入 TripPin
               </h2>
               <form
                 className="login space-y-reverse space-y-5"
@@ -172,7 +174,7 @@ export default function Auth() {
                 />
                 <div className="flex justify-between">
                   <button
-                    className="bg-stylishBlack text-white py-2 px-4 rounded-lg hover:bg-black"
+                    className="bg-black text-white py-2 px-4 rounded-lg hover:bg-black"
                     type="submit"
                     id="login-btn"
                   >
