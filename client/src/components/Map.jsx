@@ -27,6 +27,7 @@ const Map = () => {
           markerType: 'place',
           type: place.types[0],
           note: '',
+          tripId,
         }),
       },
     );

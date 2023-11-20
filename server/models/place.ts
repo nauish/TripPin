@@ -24,7 +24,6 @@ export async function insertPlace(place: {
   note?: string;
 }) {
   const coordinates = `POINT (${place.longitude} ${place.latitude})`;
-  console.log(coordinates);
   const results = await pool.query(
     `
     INSERT INTO places (user_id, name, location, marker_type, type, note)
@@ -56,4 +55,22 @@ export async function selectPlacesByTripId(TripId: number) {
   );
 
   return results.rows;
+}
+
+export async function insertPlaceToTripPlaces(
+  placeId: number,
+  tripId: number,
+  day: number,
+) {
+  const results = await pool.query(
+    `
+    INSERT INTO trip_places (place_id, trip_id, day_number)
+    VALUES ($1, $2, $3) RETURNING place_id
+  `,
+    [placeId, tripId, day],
+  );
+
+  const placeTripId = results.rows[0].place_id;
+  if (placeTripId) return placeTripId;
+  throw new Error('Insert new place in this trip failed');
 }
