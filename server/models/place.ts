@@ -74,3 +74,37 @@ export async function insertPlaceToTripPlaces(
   if (placeTripId) return placeTripId;
   throw new Error('Insert new place in this trip failed');
 }
+
+export async function updateTripPlaceDay(
+  tripId: number,
+  placeId: number,
+  day: number,
+) {
+  const results = await pool.query(
+    `
+    UPDATE trip_places
+    SET day_number = $3
+    WHERE trip_id = $1 AND place_id = $2
+    RETURNING day_number
+  `,
+    [tripId, placeId, day],
+  );
+  const result = results.rows[0].day_number;
+  if (result) return result;
+  throw new Error('Update place day failed');
+}
+
+export async function deletePlaceFromTripPlaces(
+  placeId: number,
+  tripId: number,
+) {
+  await pool.query(
+    `
+    DELETE FROM trip_places
+    WHERE place_id = $1 AND trip_id = $2
+  `,
+    [placeId, tripId],
+  );
+
+  return true;
+}
