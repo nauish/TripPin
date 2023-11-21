@@ -19,7 +19,9 @@ export async function insertChat(
 export async function selectChatByTripId(tripId: number) {
   const results = await pool.query(
     `
-    SELECT * FROM chat_messages
+    SELECT user_id, u.name, message, timestamp 
+    FROM chat_messages cm
+    JOIN users u ON cm.user_id = u.id
     WHERE trip_id = $1
     `,
     [tripId],
