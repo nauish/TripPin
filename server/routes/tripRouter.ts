@@ -5,6 +5,7 @@ import {
   createTrip,
   getTrip,
   getTripAttendees,
+  getTripChat,
 } from '../controllers/trip.js';
 import {
   createPlace,
@@ -28,6 +29,7 @@ router
 router
   .route('/v1/trips/:tripId/places/:placeId')
   .put([authenticateJWT, putTripPlaces])
-  .delete([authenticateJWT], deletePlace);
+  .delete([authenticateJWT, deletePlace]);
+router.route('/v1/trips/:tripId/chat').get([getTripChat]);
 
 export default router;

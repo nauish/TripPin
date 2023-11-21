@@ -6,6 +6,7 @@ import {
   selectTripById,
   selectTripsByUserId,
 } from '../models/trip.js';
+import { selectChatByTripId } from '../models/chat.js';
 
 export async function createTrip(req: Request, res: Response) {
   try {
@@ -90,4 +91,10 @@ export async function getTripsCreatedByUser(req: Request, res: Response) {
     }
     return res.status(500).json({ error: 'Something went wrong' });
   }
+}
+
+export async function getTripChat(req: Request, res: Response) {
+  const { tripId } = req.params;
+  const results = await selectChatByTripId(+tripId);
+  return res.status(200).json({ data: results });
 }
