@@ -16,26 +16,34 @@ import pool from './dbPools.js';
 
 export async function insertPlace(place: {
   user_id: number;
+  trip_id: number;
+  day_number: number;
   name: string;
   longitude: number;
   latitude: number;
   marker_type?: string;
   type?: string;
   note?: string;
+  start_hour?: number;
+  end_hour?: number;
 }) {
   const coordinates = `POINT (${place.longitude} ${place.latitude})`;
   const results = await pool.query(
     `
-    INSERT INTO places (user_id, name, location, marker_type, type, note)
-    VALUES($1, $2, ST_GeomFromText($3, 4326), $4, $5, $6) RETURNING id
+    INSERT INTO places (user_id, trip_id, day_number, name, location, marker_type, type, note, start_hour, end_hour)
+    VALUES($1, $2, $3, $4, ST_GeomFromText($5, 4326), $6, $7, $8, $9, $10) RETURNING id
   `,
     [
       place.user_id,
+      place.trip_id,
+      place.day_number ?? 1,
       place.name,
       coordinates,
       place.marker_type,
       place.type,
       place.note,
+      place.start_hour,
+      place.end_hour,
     ],
   );
   const placeId = results.rows[0].id;
@@ -46,10 +54,12 @@ export async function insertPlace(place: {
 export async function selectPlacesByTripId(TripId: number) {
   const results = await pool.query(
     `
-    SELECT * FROM places p
-    LEFT JOIN trip_places tp
-    ON p.id = tp.place_id
-    WHERE tp.trip_id = $1
+    SELECT 
+          *,
+          ST_X(location::geometry) AS longitude,
+          ST_Y(location::geometry) AS latitude
+    FROM places p 
+    WHERE p.trip_id = $1
   `,
     [TripId],
   );
@@ -57,54 +67,41 @@ export async function selectPlacesByTripId(TripId: number) {
   return results.rows;
 }
 
-export async function insertPlaceToTripPlaces(
+export async function updatePlace(
   placeId: number,
-  tripId: number,
-  day: number,
+  day_number: number,
+  tag: number,
+  note: string,
+  start_hour: number,
+  end_hour: number,
 ) {
   const results = await pool.query(
     `
-    INSERT INTO trip_places (place_id, trip_id, day_number)
-    VALUES ($1, $2, $3) RETURNING place_id
+    UPDATE places
+    SET 
+        day_number = $1,
+        tag = $2,
+        note = $3,
+        start_hour = $4,
+        end_hour = $5
+    WHERE id = $6
+    RETURNING place_id
   `,
-    [placeId, tripId, day],
+    [day_number, note, tag, start_hour, end_hour, placeId],
   );
-
-  const placeTripId = results.rows[0].place_id;
-  if (placeTripId) return placeTripId;
-  throw new Error('Insert new place in this trip failed');
-}
-
-export async function updateTripPlaceDay(
-  tripId: number,
-  placeId: number,
-  day: number,
-) {
-  const results = await pool.query(
-    `
-    UPDATE trip_places
-    SET day_number = $3
-    WHERE trip_id = $1 AND place_id = $2
-    RETURNING day_number
-  `,
-    [tripId, placeId, day],
-  );
-  const result = results.rows[0].day_number;
+  const result = results.rows[0].note;
   if (result) return result;
-  throw new Error('Update place day failed');
+  throw new Error('Update place note failed');
 }
 
-export async function deletePlaceFromTripPlaces(
-  placeId: number,
-  tripId: number,
-) {
-  await pool.query(
+export async function deletePlace(placeId: number) {
+  const command = await pool.query(
     `
-    DELETE FROM trip_places
-    WHERE place_id = $1 AND trip_id = $2
-  `,
-    [placeId, tripId],
+    DELETE FROM places WHERE id = $1
+    `,
+    [placeId],
   );
 
+  if (command.rowCount === 0) return false;
   return true;
 }

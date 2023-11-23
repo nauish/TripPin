@@ -5,30 +5,23 @@ import {
   selectAttendeesByTripId,
   selectTripById,
   selectTripsByUserId,
+  updateTrip,
 } from '../models/trip.js';
 import { selectChatByTripId } from '../models/chat.js';
 
 export async function createTrip(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
-    const {
-      name,
-      destination,
-      budget,
-      startDate,
-      endDate,
-      privacySetting,
-      type,
-      note,
-    } = req.body;
+    const { name, destination, budget, startDate, endDate, privacySetting, type, note } = req.body;
+    console.log(req.body);
 
     const tripId = await insertTrip({
       user_id: userId,
       destination,
       name,
       budget,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: startDate === '' ? null : startDate,
+      end_date: endDate === '' ? null : endDate,
       type,
       privacy_setting: privacySetting ?? 'Private',
       note,
@@ -68,9 +61,7 @@ export async function addSelfToTrip(req: Request, res: Response) {
 
   try {
     await insertAttendee(userId, +tripId);
-    return res
-      .status(200)
-      .json({ data: { message: 'Join trip successfully' } });
+    return res.status(200).json({ data: { message: 'Join trip successfully' } });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });
@@ -83,8 +74,8 @@ export async function getTripsCreatedByUser(req: Request, res: Response) {
   const { userId } = res.locals;
 
   try {
-    const trip = await selectTripsByUserId(+userId);
-    return res.status(200).json({ trip });
+    const data = await selectTripsByUserId(+userId);
+    return res.status(200).json({ data });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });
@@ -97,4 +88,29 @@ export async function getTripChat(req: Request, res: Response) {
   const { tripId } = req.params;
   const results = await selectChatByTripId(+tripId);
   return res.status(200).json({ data: results });
+}
+
+export async function putTrip(req: Request, res: Response) {
+  const { tripId } = req.params;
+  const { name, destination, budget, startDate, endDate, privacySetting, type, note } = req.body;
+
+  try {
+    await updateTrip({
+      id: +tripId,
+      destination,
+      name,
+      budget,
+      start_date: startDate,
+      end_date: endDate,
+      type,
+      privacy_setting: privacySetting,
+      note,
+    });
+    return res.status(200).json({ data: { message: 'Update trip successfully' } });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
 }
