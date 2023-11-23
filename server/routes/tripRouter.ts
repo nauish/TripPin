@@ -6,18 +6,19 @@ import {
   getTrip,
   getTripAttendees,
   getTripChat,
+  putTrip,
 } from '../controllers/trip.js';
 import {
   createPlace,
-  deletePlace,
+  deletePlaceFromTrip,
   getTripPlaces,
-  putTripPlaces,
+  putPlace,
 } from '../controllers/place.js';
 
 const router = Router();
 
 router.route('/v1/trips').post([authenticateJWT, createTrip]);
-router.route('/v1/trips/:tripId').get([getTrip]);
+router.route('/v1/trips/:tripId').get([getTrip]).put([putTrip]);
 router
   .route('/v1/trips/:tripId/attendees/')
   .get([authenticateJWT, getTripAttendees])
@@ -28,8 +29,8 @@ router
   .post([authenticateJWT, createPlace]);
 router
   .route('/v1/trips/:tripId/places/:placeId')
-  .put([authenticateJWT, putTripPlaces])
-  .delete([authenticateJWT, deletePlace]);
+  .put([authenticateJWT, putPlace])
+  .delete([authenticateJWT, deletePlaceFromTrip]);
 router.route('/v1/trips/:tripId/chat').get([getTripChat]);
 
 export default router;

@@ -11,6 +11,7 @@
 CREATE TABLE trips (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
+  name VARCHAR(255) NOT NULL,
   destination VARCHAR(50),
   start_date DATE,
   end_date DATE,
@@ -33,22 +34,18 @@ CREATE TABLE attendees (
 CREATE TABLE places (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
+  trip_id BIGINT NOT NULL,
+  day_number INTEGER NOT NULL,
+  start_hour TIME NOT NULL,
+  end_hour TIME NOT NULL,
   name VARCHAR(100) NOT NULL,
   location GEOGRAPHY(POINT, 4326) NOT NULL,
   marker_type VARCHAR(10) NOT NULL,
   type VARCHAR(50) NOT NULL,
   note TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
-  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE TABLE trip_places (
-  trip_id BIGINT NOT NULL,
-  place_id BIGINT NOT NULL,
-  day_number INTEGER NOT NULL,
-  PRIMARY KEY (trip_id, place_id),
   FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE,
-  FOREIGN KEY (place_id) REFERENCES places (id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 CREATE TABLE followed (
@@ -76,7 +73,7 @@ CREATE TABLE chat_messages (
   user_id BIGINT NOT NULL,
   message TEXT NOT NULL,
   timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-  FOREIGN KEY (sender_id) REFERENCES users (id),
+  FOREIGN KEY (user_id) REFERENCES users (id),
   FOREIGN KEY (trip_id) REFERENCES trips (id)
 );
 

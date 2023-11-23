@@ -34,18 +34,21 @@ io.on('connection', (socket) => {
   });
   socket.on('getMessage', async (payload) => {
     io.sockets.to(payload.room).emit('getMessage', {
-      username: payload.username,
+      name: payload.name,
       message: payload.message,
     });
     try {
-      await insertChat(payload.message, payload.room, payload.id);
+      await insertChat(payload.message, payload.room, payload.user_id);
     } catch (error) {
       console.log(error);
     }
   });
   // Synchronize marking markers on map
   socket.on('getMarker', async (payload) => {
-    io.sockets.to(payload.room).emit('getMarker', payload);
+    io.sockets.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
+  });
+  socket.on('addNewPlaceToTrip', (payload) => {
+    io.sockets.to(payload.room).emit('addNewPlaceToTrip', payload);
   });
 });
 

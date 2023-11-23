@@ -37,11 +37,12 @@ export async function insertTrip(trip: {
 }) {
   const results = await pool.query(
     `
-    INSERT INTO trips (user_id, destination, start_date, end_date, budget, type, privacy_setting, note)
-    VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+    INSERT INTO trips (user_id, name, destination, start_date, end_date, budget, type, privacy_setting, note)
+    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
   `,
     [
       trip.user_id,
+      trip.name,
       trip.destination,
       trip.start_date,
       trip.end_date,
@@ -104,9 +105,47 @@ export async function selectAttendeesByTripId(tripId: number) {
 }
 
 export async function selectTripsByUserId(userId: number) {
-  const results = await pool.query('SELECT * FROM trips WHERE user_id = $1', [
-    userId,
-  ]);
+  const results = await pool.query('SELECT * FROM trips WHERE user_id = $1', [userId]);
   const trips = results.rows;
   return trips;
+}
+
+export async function updateTrip(trip: {
+  id: number;
+  name: string;
+  destination: string;
+  start_date: Date;
+  end_date: Date;
+  budget: number;
+  type: string;
+  privacy_setting: string;
+  note: string;
+}) {
+  const results = await pool.query(
+    `
+      UPDATE trips
+      SET 
+          name = $2, 
+          destination = $3, 
+          start_date = $4, 
+          end_date = $5, 
+          budget = $6, 
+          type = $7, 
+          privacy_setting = $8, 
+          note = $9
+      WHERE id = $1
+    `,
+    [
+      trip.id,
+      trip.name,
+      trip.destination,
+      trip.start_date,
+      trip.end_date,
+      trip.budget,
+      trip.type,
+      trip.privacy_setting,
+      trip.note,
+    ],
+  );
+  return results.rows;
 }

@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 
 const Chat = () => {
-  const [ws, setWs] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
 
@@ -11,31 +10,28 @@ const Chat = () => {
   const params = useParams();
   const user = JSON.parse(localStorage.getItem('user'));
 
-  const connectToWebSocket = () => {
-    setWs(socket);
-  };
-
   useEffect(() => {
-    if (ws) {
-      console.log('Connect to WS server successfully!');
-      initWebSocket();
-    }
-  }, [ws]);
+    fetch(
+      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${params.tripId}/chat`,
+    )
+      .then((response) => response.json())
+      .then((data) => setMessages(data.data));
+    initWebSocket();
+  }, []);
 
   const initWebSocket = () => {
-    ws.emit('joinRoom', { name: user.name, room: +params.tripId });
-    ws.on('getMessage', (message) => {
+    socket.emit('joinRoom', { name: user.name, room: +params.tripId });
+    socket.on('getMessage', (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
-      console.log(message);
     });
   };
 
   const sendMessage = () => {
     const trimmedMessage = messageInput.trim();
     if (trimmedMessage !== '') {
-      ws.emit('getMessage', {
-        id: user.id,
-        username: user.name,
+      socket.emit('getMessage', {
+        user_id: user.id,
+        name: user.name,
         room: +params.tripId,
         message: trimmedMessage,
       });
@@ -60,17 +56,11 @@ const Chat = () => {
         <div className="mb-4">
           {messages.map((message, index) => (
             <p key={index} className="text-gray-700 mb-2">
-              {message.username}: {message.message}
+              {message.name}: {message.message}
             </p>
           ))}
         </div>
         <div className="flex items-center">
-          <button
-            className="bg-blue-500 text-white py-2 px-4 rounded mr-2"
-            onClick={connectToWebSocket}
-          >
-            連線
-          </button>
           <input
             type="text"
             value={messageInput}
