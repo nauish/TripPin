@@ -11,7 +11,7 @@ import Profile from '../components/Profile';
 import ProtectedRoute from './ProtectedRoute';
 import Map from '../components/Map';
 import TripForm from '../components/TripForm';
-import MyTrips from '../components/MyTrips';
+import MyTrips from '../components/Trips';
 
 const router = createBrowserRouter(
   createRoutesFromElements(

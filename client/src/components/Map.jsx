@@ -7,11 +7,11 @@ import { useParams } from 'react-router-dom';
 const Map = () => {
   const [places, setPlaces] = useState([]);
   const [map, setMap] = useState(null);
-  const params = useParams();
   const [nearbyResults, setNearbyResults] = useState([]);
-  const { tripId } = params;
-  const socket = useSocket();
   const user = JSON.parse(localStorage.getItem('user'));
+  const socket = useSocket();
+  const params = useParams();
+  const { tripId } = params;
 
   const centerToTheMarker = (latitude, longitude) => {
     map.setCenter({ lat: latitude, lng: longitude });
@@ -59,7 +59,6 @@ const Map = () => {
       fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
         .then((response) => response.json())
         .then((json) => {
-          console.log(json);
           setPlaces(json.data);
         });
     });
@@ -67,7 +66,6 @@ const Map = () => {
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
       .then((response) => response.json())
       .then((json) => {
-        console.log(json);
         setPlaces(json.data);
       });
   }, []);
@@ -86,7 +84,7 @@ const Map = () => {
         loader.importLibrary('places'),
       ]);
 
-      const { Map, InfoWindow } = mapsLib;
+      const { Map } = mapsLib;
       const { Marker } = markerLib;
       const { Autocomplete, PlacesService } = placesLib;
 
@@ -112,10 +110,10 @@ const Map = () => {
 
         socket.emit('getMarker', { room: +tripId, latLng: place.latLng });
 
-        // const service = new PlacesService(map);
-        // service.getDetails({ placeId: place.placeId }, (result, status) => {
-        //   if (status === 'OK') console.log(result);
-        // });
+        const service = new PlacesService(map);
+        service.getDetails({ placeId: place.placeId }, (result, status) => {
+          if (status === 'OK') console.log(result);
+        });
       };
 
       const addMapClick = (map) => {
@@ -128,23 +126,6 @@ const Map = () => {
             addMarkerAndDetail(clickLocation, map),
           );
       };
-
-      // const handleMarkerClick = (
-      //   place,
-      //   nearbyInfoWindow,
-      //   map,
-      //   nearbyMarker,
-      // ) => {
-      //   const nearbyInfoWindowContent = `
-      //     <div>
-      //       <h2>${place.name}</h3>
-      //       <p>評分: ${place.rating}</p>
-      //     </div>
-      //   `;
-
-      //   nearbyInfoWindow.setContent(nearbyInfoWindowContent);
-      //   nearbyInfoWindow.open(map, nearbyMarker);
-      // };
 
       const handleNearbySearch = (results, status, map) => {
         // to do: setState and render results in another component
@@ -243,7 +224,6 @@ const Map = () => {
             {result.types && (
               <p className="text-gray-700">類型: {result.types.join(', ')}</p>
             )}
-            {/* Add more information as needed */}
           </li>
         ))}
       </ul>
