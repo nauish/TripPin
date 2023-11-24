@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
+import Map from './Map';
+import Autocomplete from './Autocomplete';
 
-const TripForm = () => {
+const TripForm = ({ className }) => {
   const [formData, setFormData] = useState({
     name: '',
     destination: '',
@@ -15,6 +18,7 @@ const TripForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    console.log(name, value);
     setFormData({
       ...formData,
       [name]: value,
@@ -48,140 +52,152 @@ const TripForm = () => {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-md mx-auto mt-4 p-6 bg-white rounded-md shadow-md"
-    >
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="destination"
+    <>
+      <div className="pt-4 px-10 font-bold text-3xl">新增行程</div>
+      <div className="flex justify-center gap-10 px-10">
+        <form
+          onSubmit={handleSubmit}
+          className={cn(
+            'min-w-[400px] max-w-md mt-4 p-6 bg-white rounded-md shadow-md',
+            className,
+          )}
         >
-          :
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          type="text"
-          name="destination"
-          value={formData.destination}
-          onChange={handleChange}
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="name"
+            >
+              行程名稱
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="destination"
+            >
+              旅遊地點 (城市、國家)
+            </label>
+            <Autocomplete
+              id="destination"
+              name="destination"
+              value={formData.destination}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="startDate"
+            >
+              開始時間
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="endDate"
+            >
+              結束時間
+              <input
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                type="date"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+              />
+            </label>
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="budget"
+            >
+              預算
+              <input
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                type="text"
+                name="budget"
+                value={formData.budget}
+                onChange={handleChange}
+              />
+            </label>
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="type"
+            >
+              旅行類別
+              <input
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                type="text"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+              />
+            </label>
+          </div>
+
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="privacySetting"
+            >
+              隱私設定
+            </label>
+            <select
+              className="block appearance-none w-full border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              name="privacySetting"
+              value={formData.privacySetting}
+              onChange={handleChange}
+            >
+              <option value="public">公開</option>
+              <option value="private">不公開</option>
+            </select>
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="note"
+            >
+              備註
+            </label>
+            <textarea
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              name="note"
+              value={formData.note}
+              onChange={handleChange}
+            />
+          </div>
+          <Button type="submit">新建行程</Button>
+        </form>
+        <Map
+          className="w-full h-[100vh]"
+          latitude={23.553118}
+          longitude={121.0211024}
+          zoom={8}
         />
       </div>
-
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="name"
-        >
-          Trip Name:
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="startDate"
-        >
-          Start Date:
-        </label>
-        <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          type="date"
-          name="startDate"
-          value={formData.startDate}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="endDate"
-        >
-          End Date:
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            type="date"
-            name="endDate"
-            value={formData.endDate}
-            onChange={handleChange}
-          />
-        </label>
-      </div>
-
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="budget"
-        >
-          Budget:
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            type="text"
-            name="budget"
-            value={formData.budget}
-            onChange={handleChange}
-          />
-        </label>
-      </div>
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="type"
-        >
-          Type:
-          <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            type="text"
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-          />
-        </label>
-      </div>
-
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="privacySetting"
-        >
-          Privacy Setting:
-        </label>
-        <select
-          className="block appearance-none w-full border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          name="privacySetting"
-          value={formData.privacySetting}
-          onChange={handleChange}
-        >
-          <option value="public">Public</option>
-          <option value="private">Private</option>
-        </select>
-      </div>
-
-      <div className="mb-4">
-        <label
-          className="block text-gray-700 text-sm font-bold mb-2"
-          htmlFor="note"
-        >
-          Note:
-        </label>
-        <textarea
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          name="note"
-          value={formData.note}
-          onChange={handleChange}
-        />
-      </div>
-
-      <Button type="submit">Submit</Button>
-    </form>
+    </>
   );
 };
 
