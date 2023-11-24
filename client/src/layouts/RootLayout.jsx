@@ -2,6 +2,8 @@ import { Outlet } from 'react-router-dom';
 import { SocketProvider } from '../context/SocketContext';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.min.css';
 
 export default function RootLayout() {
   return (
@@ -15,6 +17,7 @@ export default function RootLayout() {
         </main>
         <>
           <Footer />
+          <ToastContainer />
         </>
       </div>
     </SocketProvider>
