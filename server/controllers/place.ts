@@ -40,27 +40,7 @@ export async function getTripPlaces(req: Request, res: Response) {
     const { tripId } = req.params;
     const places = await selectPlacesByTripId(+tripId);
 
-    const tripDays = places.reduce((acc, place) => {
-      const dayNumber = place.day_number;
-      const day = acc.find((d: any) => d.dayNumber === dayNumber);
-
-      if (!day) {
-        acc.push({
-          dayNumber,
-          places: [
-            {
-              ...place,
-            },
-          ],
-        });
-      } else {
-        // If day exists, push the place to its places array
-        day.places.push({ ...place });
-      }
-      return acc;
-    }, []);
-
-    return res.json({ data: tripDays });
+    return res.json({ data: places });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });
