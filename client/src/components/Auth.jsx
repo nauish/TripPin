@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export default function Auth() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
   const [currentForm, setCurrentForm] = useState('register');
 
   const navigate = useNavigate();
@@ -36,11 +36,8 @@ export default function Auth() {
         console.error('Error:', response.status, response.statusText);
 
       const result = await response.json();
-      console.log(result);
-
-      result.error
-        ? setMessage(result.error)
-        : setMessage('帳號密碼登入成功！');
+      const SUCCESSFUL_LOGIN_MESSAGE = '帳號密碼登入成功！';
+      result.error ? toast(result.error) : toast(SUCCESSFUL_LOGIN_MESSAGE);
 
       if (result.data.access_token) {
         localStorage.setItem('accessToken', result.data.access_token);
@@ -192,7 +189,6 @@ export default function Auth() {
           </>
         )}
       </div>
-      <div className="message-container text-center pt-10 ">{message}</div>
     </>
   );
 }
