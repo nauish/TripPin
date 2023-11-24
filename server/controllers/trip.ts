@@ -13,8 +13,6 @@ export async function createTrip(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
     const { name, destination, budget, startDate, endDate, privacySetting, type, note } = req.body;
-    console.log(req.body);
-
     const tripId = await insertTrip({
       user_id: userId,
       destination,

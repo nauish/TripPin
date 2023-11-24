@@ -35,17 +35,10 @@ function createToken(userId: number, seconds: number) {
 
 export async function createUser(req: Request, res: Response) {
   try {
-    const expiredIn = process.env.EXPIRE_IN_SECONDS
-      ? +process.env.EXPIRE_IN_SECONDS
-      : 3600;
+    const expiredIn = process.env.EXPIRE_IN_SECONDS ? +process.env.EXPIRE_IN_SECONDS : 3600;
     const { name, email, password } = req.body;
     const hashedPassword = await hash(password);
-    const userId = await userModel.insertUser(
-      email,
-      name,
-      PROVIDER.NATIVE,
-      hashedPassword,
-    );
+    const userId = await userModel.insertUser(email, name, PROVIDER.NATIVE, hashedPassword);
     const token = await createToken(userId, expiredIn);
     return res
       .cookie('jwt', token, cookieOptions)
@@ -66,32 +59,25 @@ export async function createUser(req: Request, res: Response) {
   } catch (err) {
     if (err instanceof Error) {
       if (err.message.includes('duplicate key')) {
-        return res.status(400).json({ error: 'Email already exists' });
+        return res.status(400).json({ error: '信箱已經被註冊過' });
       }
-
       return res.status(400).json({ error: err.message });
     }
-    return res.status(500).json({ error: 'Sign up failed' });
+    return res.status(500).json({ error: '註冊失敗' });
   }
 }
 
 export async function loginUser(req: Request, res: Response) {
   try {
-    const expiredIn = process.env.EXPIRE_IN_SECONDS
-      ? +process.env.EXPIRE_IN_SECONDS
-      : 3600;
+    const expiredIn = process.env.EXPIRE_IN_SECONDS ? +process.env.EXPIRE_IN_SECONDS : 3600;
     const { email, password, provider } = req.body;
     const user = await userModel.selectUserByEmail(email);
 
-    if (!user) {
-      throw new Error('User does not exist or invalid password');
-    }
+    if (!user) throw new Error('使用者帳號或密碼錯誤');
 
     if (provider === PROVIDER.NATIVE) {
-      const isValidPassword = verify(user.token, password);
-      if (!isValidPassword) {
-        throw new Error('User does not exist or invalid password');
-      }
+      const isValidPassword = await verify(user.token, password);
+      if (!isValidPassword) throw new Error('使用者帳號或密碼錯誤');
     }
 
     const token = await createToken(user.id, expiredIn);
@@ -112,10 +98,8 @@ export async function loginUser(req: Request, res: Response) {
         },
       });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: 'Sign in failed' });
+    if (err instanceof Error) return res.status(400).json({ error: err.message });
+    return res.status(500).json({ error: '登入失敗' });
   }
 }
 
@@ -132,9 +116,7 @@ export async function getProfile(req: Request, res: Response) {
       },
     });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
+    if (err instanceof Error) return res.status(400).json({ error: err.message });
     return res.status(500).json({ error: 'Get profile failed' });
   }
 }
