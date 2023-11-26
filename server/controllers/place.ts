@@ -60,6 +60,12 @@ export async function getTripPlaces(req: Request, res: Response) {
       return acc;
     }, []);
 
+    interface TripDay {
+      dayNumber: number;
+      places: any[];
+    }
+
+    tripDays.sort((a: TripDay, b: TripDay) => a.dayNumber - b.dayNumber);
     return res.json({ data: tripDays });
   } catch (error) {
     if (error instanceof Error) {
