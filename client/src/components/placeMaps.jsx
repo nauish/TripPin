@@ -4,6 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useParams } from 'react-router-dom';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
+import { toast } from 'react-toastify';
 
 function reorder(list, startIndex, end) {
   const result = Array.from(list);
@@ -21,6 +22,15 @@ const PlacesMaps = () => {
   const socket = useSocket();
   const params = useParams();
   const { tripId } = params;
+
+  socket.on('addNewPlaceToTrip', () => {
+    console.log('new place added');
+    fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
+      .then((response) => response.json())
+      .then((json) => {
+        setData(json.data);
+      });
+  });
 
   const centerToTheMarker = (latitude, longitude) => {
     map.setCenter({ lat: latitude, lng: longitude });
@@ -45,38 +55,23 @@ const PlacesMaps = () => {
           tripId,
         }),
       },
-      socket.emit('addNewPlaceToTrip', {
-        room: +tripId,
-        name: place.name,
-      }),
     );
-    if (!response.ok) {
-      const json = await response.json();
-      await console.error(`${json.error}`);
-    } else {
-      fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
-        .then((response) => response.json())
-        .then((json) => {
-          console.log(json);
-          setData(json.data);
-        });
+
+    if (response.status === 200) {
+      socket.emit('addNewPlaceToTrip', { room: +tripId });
     }
   };
 
-  useEffect(() => {
-    socket.on('addNewPlaceToTrip', () => {
-      fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
-        .then((response) => response.json())
-        .then((json) => {
-          setData(json.data);
-        });
-    });
-
+  const fetchData = () => {
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
       .then((response) => response.json())
       .then((json) => {
         setData(json.data);
       });
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -141,21 +136,18 @@ const PlacesMaps = () => {
         console.log(results);
         setNearbyResults(results);
 
-        // const createMarker = (place) => {
-        //   const nearbyMarker = new Marker({
-        //     map: map,
-        //     position: place.geometry.location,
-        //   });
+        const createMarker = (place) => {
+          new Marker({
+            map: map,
+            position: place.geometry.location,
+          });
+        };
 
-        //   let nearbyInfoWindow = new InfoWindow();
-        //   nearbyMarker.addListener('click', () =>
-        //     handleMarkerClick(place, nearbyInfoWindow, map, nearbyMarker),
-        //   );
-        // };
-
-        // if (status === 'OK') {
-        //   results.forEach((result) => {createMarker(result)});
-        // }
+        if (status === 'OK') {
+          results.forEach((result) => {
+            createMarker(result);
+          });
+        }
       };
 
       const handlePlaceChanged = (autocomplete, map) => {
@@ -200,20 +192,23 @@ const PlacesMaps = () => {
   }, []);
 
   const boards = data.map((day) => (
-    <div key={day.dayNumber} className="">
+    <div
+      key={day.dayNumber}
+      className="bg-gray-100 border border-gray-300 shadow-lg rounded-lg m-4 p-4 w-80 h-auto flex-shrink-0"
+    >
       <h1 className="text-3xl font-bold mb-4">第 {day.dayNumber} 天</h1>
       <Droppable droppableId={day.dayNumber.toString()} type="card">
         {(provided) => (
           <ul
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className="list-disc pl-4"
+            className="list-disc pl-4 overflow-y-auto"
           >
             {day.places.map((place, index) => (
               <Draggable key={place.id} draggableId={place.id} index={index}>
                 {(provided) => (
                   <li
-                    className="mb-2"
+                    className="mb-2 bg-white border border-gray-200 shadow-sm rounded-sm p-2 cursor-move flex justify-between"
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
@@ -221,8 +216,16 @@ const PlacesMaps = () => {
                       centerToTheMarker(place.latitude, place.longitude)
                     }
                   >
-                    <h3 className="text-lg font-medium">{place.name}</h3>
-                    <p className="text-gray-600 mb-1">{place.type}</p>
+                    <div>
+                      <h3 className="text-lg font-medium">{place.name}</h3>
+                      <p className="text-gray-600 mb-1">{place.type}</p>
+                    </div>
+                    <button
+                      onClick={() => deletePlace(place.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      ×
+                    </button>
                   </li>
                 )}
               </Draggable>
@@ -233,6 +236,26 @@ const PlacesMaps = () => {
       </Droppable>
     </div>
   ));
+
+  const deletePlace = async (placeId) => {
+    const response = await fetch(
+      `${
+        import.meta.env.VITE_BACKEND_HOST
+      }api/v1/trips/${tripId}/places/${placeId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      },
+    );
+
+    if (response.status === 200) {
+      socket.emit('addPlaceToTrip', { room: +tripId });
+      fetchData();
+    }
+  };
 
   const onDragEnd = (result) => {
     const { destination, source, type } = result;
@@ -267,8 +290,6 @@ const PlacesMaps = () => {
           place.order = idx;
         });
         sourceList.places = reorderedList;
-
-        setData(newOrderedData);
       } else {
         // Move the card between lists
         const [movedPlace] = sourceList.places.splice(source.index, 1);
@@ -276,16 +297,41 @@ const PlacesMaps = () => {
         // Assign the place to the moved day
         movedPlace.day_number = +destination.droppableId;
 
-        console.log(movedPlace);
+        updateData(movedPlace, movedPlace.id);
         // Add the moved card to the destination list
         destList.places.splice(destination.index, 0, movedPlace);
 
         sourceList.places.forEach((place, idx) => (place.order = idx));
         destList.places.forEach((place, idx) => (place.order = idx));
-
-        setData(newOrderedData);
-        console.log(newOrderedData);
       }
+      setData(newOrderedData);
+    }
+  };
+
+  const updateData = async (data, placeId) => {
+    try {
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_BACKEND_HOST
+        }api/v1/trips/${tripId}/places/${placeId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: JSON.stringify(data),
+        },
+      );
+
+      if (response.status === 200) {
+        socket.emit('addNewPlaceToTrip', { room: +tripId });
+      } else {
+        const json = await response.json();
+        console.log(json);
+      }
+    } catch (error) {
+      console.log(error);
     }
   };
 

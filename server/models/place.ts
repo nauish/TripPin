@@ -85,13 +85,13 @@ export async function updatePlace(
         start_hour = $4,
         end_hour = $5
     WHERE id = $6
-    RETURNING place_id
+    RETURNING id
   `,
     [day_number, note, tag, start_hour, end_hour, placeId],
   );
-  const result = results.rows[0].note;
+  const result = results.rows[0];
   if (result) return result;
-  throw new Error('Update place note failed');
+  throw new Error('Update place failed');
 }
 
 export async function deletePlace(placeId: number) {

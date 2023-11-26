@@ -13,6 +13,7 @@ import {
   deletePlaceFromTrip,
   getTripPlaces,
   putPlace,
+  putPlaces,
 } from '../controllers/place.js';
 
 const router = Router();
@@ -26,7 +27,8 @@ router
 router
   .route('/v1/trips/:tripId/places/')
   .get([getTripPlaces])
-  .post([authenticateJWT, createPlace]);
+  .post([authenticateJWT, createPlace])
+  .put([authenticateJWT, putPlaces]);
 router
   .route('/v1/trips/:tripId/places/:placeId')
   .put([authenticateJWT, putPlace])

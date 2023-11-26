@@ -72,9 +72,29 @@ export async function getTripPlaces(req: Request, res: Response) {
 export async function putPlace(req: Request, res: Response) {
   try {
     const { placeId } = req.params;
-    const { dayNumber, tag, note, startHour, endHour } = req.body;
-    const result = await updatePlace(+placeId, dayNumber, tag, note, startHour, endHour);
+    const data = req.body;
+    const result = await updatePlace(
+      +placeId,
+      data.day_number,
+      data.tag,
+      data.note,
+      data.start_hour,
+      data.end_hour,
+    );
     return res.json({ data: result });
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(400).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function putPlaces(req: Request, res: Response) {
+  try {
+    const data = req.body;
+    console.log(data);
+    return res.json({ data });
   } catch (err) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });

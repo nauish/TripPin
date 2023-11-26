@@ -48,7 +48,7 @@ io.on('connection', (socket) => {
     io.sockets.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
   });
   socket.on('addNewPlaceToTrip', (payload) => {
-    io.sockets.to(payload.room).emit('addNewPlaceToTrip', payload);
+    socket.to(payload.room).emit('addNewPlaceToTrip', payload);
   });
 });
 
