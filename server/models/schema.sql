@@ -35,6 +35,7 @@ CREATE TABLE places (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
   trip_id BIGINT NOT NULL,
+  tag VARCHAR(255) NOT NULL,
   day_number INTEGER NOT NULL,
   start_hour TIME NOT NULL,
   end_hour TIME NOT NULL,

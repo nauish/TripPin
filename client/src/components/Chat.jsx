@@ -51,33 +51,31 @@ const Chat = () => {
   };
 
   return (
-    <>
-      <div className="max-w-md mx-auto mt-8 p-4 bg-white rounded-lg shadow-md">
-        <div className="mb-4">
-          {messages.map((message, index) => (
-            <p key={index} className="text-gray-700 mb-2">
-              {message.name}: {message.message}
-            </p>
-          ))}
-        </div>
-        <div className="flex items-center">
-          <input
-            type="text"
-            value={messageInput}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="輸入訊息"
-            className="flex-grow py-2 px-4 border border-gray-300 rounded"
-          />
-          <button
-            className="bg-green-500 text-white py-2 px-4 rounded ml-2"
-            onClick={sendMessage}
-          >
-            傳送
-          </button>
-        </div>
+    <div className="fixed bottom-0 right-0 z-10 max-w-md p-4 bg-gray-50 rounded-lg shadow-md">
+      <div className="mb-4">
+        {messages.map((message, index) => (
+          <p key={index} className="text-gray-700 mb-2">
+            {message.name}: {message.message}
+          </p>
+        ))}
       </div>
-    </>
+      <div className="flex items-center">
+        <input
+          type="text"
+          value={messageInput}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder="輸入訊息"
+          className="flex-grow py-2 px-4 border border-gray-300 rounded"
+        />
+        <button
+          className="bg-green-500 text-white py-2 px-4 rounded ml-2"
+          onClick={sendMessage}
+        >
+          傳送
+        </button>
+      </div>
+    </div>
   );
 };
 

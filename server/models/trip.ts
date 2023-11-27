@@ -61,10 +61,6 @@ export async function selectTripById(id: number) {
   const results = await pool.query(
     `
     SELECT * FROM trips t
-    LEFT JOIN trip_places tp
-    ON t.id = tp.trip_id
-    LEFT JOIN places p
-    ON tp.place_id = p.id
     WHERE t.id = $1
   `,
     [id],

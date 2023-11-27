@@ -10,8 +10,8 @@ import RootLayout from '../layouts/RootLayout';
 import Profile from '../components/Profile';
 import ProtectedRoute from './ProtectedRoute';
 import MyTrips from '../components/Trips';
-import TripForm from '@/components/TripForm';
-import PlacesMaps from '@/components/placeMaps';
+import TripForm from '../components/TripForm';
+import PlacesMaps from '../components/PlaceMaps';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -20,16 +20,16 @@ const router = createBrowserRouter(
       <Route element={<ProtectedRoute />}>
         <Route path="/trip" element={<TripForm />} />
         <Route path="users/:userId/trips" element={<MyTrips />} />
+        <Route
+          path="/trips/:tripId"
+          element={
+            <>
+              <PlacesMaps className="h-[400px] w-full" />
+              <Chat />
+            </>
+          }
+        />
       </Route>
-      <Route
-        path="/trips/:tripId"
-        element={
-          <>
-            <PlacesMaps className="h-[400px] w-full" />
-            <Chat />
-          </>
-        }
-      />
       <Route path="/profile" element={<Profile />} />
       <Route path="/auth" element={<Auth />} />
       <Route
