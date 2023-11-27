@@ -52,17 +52,17 @@ export async function insertPlace(place: {
 }
 
 export async function selectPlacesByTripId(TripId: number) {
-  const results = await pool.query(
-    `
+  const combinedQuery = `
     SELECT 
-          *,
-          ST_X(location::geometry) AS longitude,
-          ST_Y(location::geometry) AS latitude
+      *,
+      ST_X(location::geometry) AS longitude,
+      ST_Y(location::geometry) AS latitude,
+      (SELECT max(day_number) FROM places WHERE trip_id = $1) AS max_day_number
     FROM places p 
     WHERE p.trip_id = $1
-  `,
-    [TripId],
-  );
+  `;
+
+  const results = await pool.query(combinedQuery, [TripId]);
 
   return results.rows;
 }

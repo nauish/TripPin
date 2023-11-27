@@ -12,6 +12,7 @@ import ProtectedRoute from './ProtectedRoute';
 import MyTrips from '../components/Trips';
 import TripForm from '../components/TripForm';
 import PlacesMaps from '../components/PlaceMaps';
+import Comment from '@/components/Comment';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -26,6 +27,7 @@ const router = createBrowserRouter(
             <>
               <PlacesMaps className="h-[400px] w-full" />
               <Chat />
+              <Comment />
             </>
           }
         />

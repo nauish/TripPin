@@ -39,33 +39,17 @@ export async function getTripPlaces(req: Request, res: Response) {
   try {
     const { tripId } = req.params;
     const places = await selectPlacesByTripId(+tripId);
+    const maxDayNumber = (await places[0]) ? places[0].max_day_number : 0;
+    const allDays = Array.from({ length: maxDayNumber }, (_, index) => index + 1);
 
-    const tripDays = places.reduce((acc, place) => {
-      const dayNumber = place.day_number;
-      const day = acc.find((d: any) => d.dayNumber === dayNumber);
+    const tripDays = allDays.map((dayNumber) => {
+      const dayPlaces = places.filter((place) => place.day_number === dayNumber);
+      return {
+        dayNumber,
+        places: dayPlaces.map((place) => ({ ...place })),
+      };
+    });
 
-      if (!day) {
-        acc.push({
-          dayNumber,
-          places: [
-            {
-              ...place,
-            },
-          ],
-        });
-      } else {
-        // If day exists, push the place to its places array
-        day.places.push({ ...place });
-      }
-      return acc;
-    }, []);
-
-    interface TripDay {
-      dayNumber: number;
-      places: any[];
-    }
-
-    tripDays.sort((a: TripDay, b: TripDay) => a.dayNumber - b.dayNumber);
     return res.json({ data: tripDays });
   } catch (error) {
     if (error instanceof Error) {

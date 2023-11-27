@@ -15,6 +15,7 @@ import {
   putPlace,
   putPlaces,
 } from '../controllers/place.js';
+import { getComments, postComment } from '../controllers/comment.js';
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router
   .put([authenticateJWT, putPlace])
   .delete([authenticateJWT, deletePlaceFromTrip]);
 router.route('/v1/trips/:tripId/chat').get([getTripChat]);
+router.route('/v1/trips/:tripId/comments').get([getComments]).post([postComment]);
 
 export default router;

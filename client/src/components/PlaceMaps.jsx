@@ -310,6 +310,11 @@ const PlacesMaps = () => {
     );
   }
 
+  const addNewDay = () => {
+    const maxDay = Math.max(...data.map((day) => day.dayNumber));
+    setData([...data, { dayNumber: maxDay + 1, places: [] }]);
+  };
+
   const boards = data.map((day) => (
     <div
       key={day.dayNumber}
@@ -421,6 +426,7 @@ const PlacesMaps = () => {
 
       if (response.status === 200) {
         socket.emit('addNewPlaceToTrip', { room: +tripId });
+        console.log(data);
         toast('景點更新成功');
       } else {
         const json = await response.json();
@@ -472,6 +478,12 @@ const PlacesMaps = () => {
       <DragDropContext onDragEnd={onDragEnd}>
         <h1 className="text-3xl font-bold mb-4">目前景點</h1>
         <div className="flex">{boards}</div>
+        <button
+          onClick={addNewDay}
+          className="bg-blue-500 text-white p-2 m-4 rounded-lg"
+        >
+          Add a new day
+        </button>
       </DragDropContext>
     </div>
   );
