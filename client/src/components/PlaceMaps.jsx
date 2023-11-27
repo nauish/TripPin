@@ -7,11 +7,11 @@ import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { toast } from 'react-toastify';
 
 function reorder(list, startIndex, end) {
   const result = Array.from(list);
@@ -24,7 +24,6 @@ function reorder(list, startIndex, end) {
 const PlacesMaps = () => {
   const [data, setData] = useState([]);
   const [map, setMap] = useState(null);
-  const [autocompletePlace, setAutocompletePlace] = useState([]);
   const [nearbyResults, setNearbyResults] = useState([]);
   const user = JSON.parse(localStorage.getItem('user'));
   const socket = useSocket();
@@ -66,7 +65,9 @@ const PlacesMaps = () => {
     );
 
     if (response.status === 200) {
+      console.log('place added');
       socket.emit('addNewPlaceToTrip', { room: +tripId });
+      fetchData();
     }
   };
 
@@ -171,14 +172,14 @@ const PlacesMaps = () => {
 
         resultMarker.setPosition(place.geometry.location);
 
-        // const request = {
-        //   location: place.geometry.location,
-        //   radius: '500',
-        // };
-        // const service = new PlacesService(map);
-        // service.nearbySearch(request, (results, status) =>
-        //   handleNearbySearch(results, status, map),
-        // );
+        const request = {
+          location: place.geometry.location,
+          radius: '500',
+        };
+        const service = new PlacesService(map);
+        service.nearbySearch(request, (results, status) =>
+          handleNearbySearch(results, status, map),
+        );
       };
 
       const createAutocomplete = (map) => {
@@ -199,6 +200,116 @@ const PlacesMaps = () => {
     initMap();
   }, []);
 
+  function PlaceItem({ place, updateData, centerToTheMarker, index }) {
+    const [formData, setFormData] = useState({ ...place });
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+      console.log(formData);
+    };
+
+    return (
+      <Draggable key={place.id} draggableId={place.id} index={index}>
+        {(provided) => (
+          <li
+            className="mb-2 bg-white border border-gray-200 shadow-sm rounded-sm p-2 cursor-move"
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            onClick={() => centerToTheMarker(place.latitude, place.longitude)}
+          >
+            <div>
+              <h3 className="text-lg font-medium">{place.name}</h3>
+              <p className="text-gray-600 mb-1">{place.type}</p>
+            </div>
+
+            <Dialog>
+              <DialogTrigger>
+                <a className="text-blue-500 hover:text-blue-700">編輯</a>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{place.name}</DialogTitle>
+                </DialogHeader>
+                <div className="flex items-center space-x-2">
+                  <label className="text-gray-600">標籤：</label>
+                  <input
+                    type="text"
+                    name="tag"
+                    className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    value={formData.tag}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <label className="text-gray-600">種類：</label>
+                  <input
+                    type="text"
+                    name="type"
+                    className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    value={formData.type}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <label className="text-gray-600 mt-2">筆記：</label>
+                  <textarea
+                    type="text"
+                    name="note"
+                    className="border border-gray-300 px-2 py-1 rounded w-full h-32 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    value={formData.note || undefined}
+                    onChange={handleChange}
+                  ></textarea>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => updateData(formData, place.id)}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  >
+                    儲存
+                  </button>
+                  <button
+                    onClick={() => deletePlace(place.id)}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700"
+                  >
+                    刪除
+                  </button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <button
+              onClick={() => deletePlace(place.id)}
+              className="text-red-500 hover:text-red-700"
+            >
+              刪除
+            </button>
+          </li>
+        )}
+      </Draggable>
+    );
+  }
+
+  function DayPlaces({ day }) {
+    return (
+      <ul>
+        {day.places.map((place, index) => (
+          <PlaceItem
+            key={place.id}
+            place={place}
+            updateData={updateData}
+            centerToTheMarker={centerToTheMarker}
+            index={index}
+          />
+        ))}
+      </ul>
+    );
+  }
+
   const boards = data.map((day) => (
     <div
       key={day.dayNumber}
@@ -212,104 +323,7 @@ const PlacesMaps = () => {
             {...provided.droppableProps}
             className=" pl-4 "
           >
-            {day.places.map((place, index) => (
-              <Draggable key={place.id} draggableId={place.id} index={index}>
-                {(provided) => (
-                  <li
-                    className="mb-2 bg-white border border-gray-200 shadow-sm rounded-sm p-2 cursor-move"
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                    onClick={() =>
-                      centerToTheMarker(place.latitude, place.longitude)
-                    }
-                  >
-                    <div>
-                      <h3 className="text-lg font-medium">{place.name}</h3>
-                      <p className="text-gray-600 mb-1">{place.type}</p>
-                    </div>
-
-                    <Dialog>
-                      <DialogTrigger>
-                        <button className="text-blue-500 hover:text-blue-700">
-                          編輯
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>{place.name}</DialogTitle>
-                          <DialogDescription className="mt-4 space-y-4">
-                            <div className="flex items-center space-x-2">
-                              <label className="text-gray-600">標籤：</label>
-                              <input
-                                type="text"
-                                name=""
-                                id=""
-                                placeholder=""
-                                className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <label className="text-gray-600">種類：</label>
-                              <input
-                                type="text"
-                                name=""
-                                id=""
-                                placeholder=""
-                                className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <label className="text-gray-600">日期：</label>
-                              <input
-                                type="text"
-                                name=""
-                                id=""
-                                placeholder=""
-                                className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              />
-                            </div>
-                            <div className="flex items-start space-x-2">
-                              <label className="text-gray-600 mt-2">
-                                筆記：
-                              </label>
-                              <textarea
-                                type="text"
-                                name=""
-                                id=""
-                                placeholder=""
-                                className="border border-gray-300 px-2 py-1 rounded w-full h-32 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              ></textarea>
-                            </div>
-                            <div className="flex justify-end space-x-2">
-                              <button
-                                onClick={() => updateData(place.id)}
-                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                              >
-                                儲存
-                              </button>
-
-                              <button
-                                onClick={() => deletePlace(place.id)}
-                                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                              >
-                                刪除
-                              </button>
-                            </div>
-                          </DialogDescription>
-                        </DialogHeader>
-                      </DialogContent>
-                    </Dialog>
-                    <button
-                      onClick={() => deletePlace(place.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      刪除
-                    </button>
-                  </li>
-                )}
-              </Draggable>
-            ))}
+            <DayPlaces day={day} />
             {provided.placeholder}
           </ul>
         )}
@@ -347,6 +361,7 @@ const PlacesMaps = () => {
       return;
     if (type === 'card') {
       let newOrderedData = [...data];
+      console.log(newOrderedData);
       const sourceList = newOrderedData.find(
         (list) => list.dayNumber?.toString() === source.droppableId,
       );
@@ -406,6 +421,7 @@ const PlacesMaps = () => {
 
       if (response.status === 200) {
         socket.emit('addNewPlaceToTrip', { room: +tripId });
+        toast('景點更新成功');
       } else {
         const json = await response.json();
         console.log(json);
