@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { Loader } from '@googlemaps/js-api-loader';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import {
   Dialog,
@@ -12,6 +12,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'react-toastify';
+import { Button } from './ui/button';
+import useMapApi from '@/hooks/useMapApi';
 
 function reorder(list, startIndex, end) {
   const result = Array.from(list);
@@ -23,24 +25,83 @@ function reorder(list, startIndex, end) {
 
 const PlacesMaps = () => {
   const [data, setData] = useState([]);
+  const { PlacesLibrary, MarkerLibrary } = useMapApi();
+  const PlacesService = PlacesLibrary?.PlacesService;
+  const Marker = MarkerLibrary?.Marker;
   const [map, setMap] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
   const [nearbyResults, setNearbyResults] = useState([]);
   const user = JSON.parse(localStorage.getItem('user'));
   const socket = useSocket();
   const params = useParams();
   const { tripId } = params;
+  const navigate = useNavigate();
+  const [attendeeEmail, setAttendeeEmail] = useState([]);
+  const [editLock, setEditLock] = useState([]);
 
-  socket.on('addNewPlaceToTrip', () => {
-    console.log('new place added');
-    fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
+  function handleAttendeeSubmit(event) {
+    event.preventDefault();
+    fetch(
+      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/attendees`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: JSON.stringify({ email: attendeeEmail }),
+      },
+    )
       .then((response) => response.json())
-      .then((json) => {
-        setData(json.data);
+      .then((data) => {
+        if (data.data) {
+          toast(data.data.message);
+          setAttendeeEmail('');
+        } else {
+          // Show error message
+          toast('User addition failed: ' + data.error);
+        }
+      })
+      .catch((error) => {
+        // Handle network error
+        alert('Network error: ' + error);
       });
-  });
+  }
+
+  const setCenter = (latLng) => {
+    map.setCenter(latLng);
+  };
+
+  const handleNearbySearch = (map, place) => {
+    // to do: setState and render results in another component
+    const request = {
+      location: place.geometry.location,
+      radius: '500',
+    };
+    const service = new PlacesService(map);
+
+    const callback = (results, status) => {
+      if (status === 'OK') {
+        console.log(results);
+        setNearbyResults(results);
+        results.forEach((result) => {
+          new Marker({
+            map: map,
+            position: result.geometry.location,
+          });
+        });
+      }
+    };
+
+    service.nearbySearch(request, callback);
+  };
 
   const centerToTheMarker = (latitude, longitude) => {
     map.setCenter({ lat: latitude, lng: longitude });
+    new Marker({
+      map: map,
+      position: { lat: latitude, lng: longitude },
+    });
   };
 
   const addPlaceToTrip = async (place) => {
@@ -65,26 +126,45 @@ const PlacesMaps = () => {
     );
 
     if (response.status === 200) {
-      console.log('place added');
+      toast('已新增景點');
       socket.emit('addNewPlaceToTrip', { room: +tripId });
       fetchData();
     }
   };
 
   const fetchData = () => {
-    fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`)
-      .then((response) => response.json())
+    fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/places`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+      },
+    })
+      .then((response) => {
+        if (response.status === 401) {
+          toast.error('您無權限瀏覽此行程');
+          navigate('/auth');
+        }
+
+        return response.json();
+      })
       .then((json) => {
+        console.log(json);
         setData(json.data);
+      })
+      .catch((error) => {
+        console.log(error);
       });
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => fetchData(), []);
 
   useEffect(() => {
     socket.emit('joinRoom', { name: user.name, room: +tripId });
+    socket.on('addNewPlaceToTrip', () => {
+      fetchData();
+    });
+    socket.on('editLock', () => {
+      console.log('hello');
+    });
+
     const initMap = async () => {
       const loader = new Loader({
         apiKey: import.meta.env.VITE_MAPS_API,
@@ -99,13 +179,15 @@ const PlacesMaps = () => {
 
       const { Map } = mapsLib;
       const { Marker } = markerLib;
-      const { Autocomplete, PlacesService } = placesLib;
+      const { Autocomplete } = placesLib;
 
       socket.on('getMarker', (data) => {
+        toast('有人送來地點');
         new Marker({
           position: data.latLng,
           map: map,
         });
+        map.setCenter(data?.latLng || data.geometry.location);
       });
 
       const createMap = () => {
@@ -115,18 +197,13 @@ const PlacesMaps = () => {
         });
       };
 
-      const addMarkerAndDetail = (place, map) => {
+      const addMarker = (place, map) => {
         new Marker({
-          position: place.latLng,
+          position: place?.latLng || place.geometry.location,
           map: map,
         });
 
         socket.emit('getMarker', { room: +tripId, latLng: place.latLng });
-
-        const service = new PlacesService(map);
-        service.getDetails({ placeId: place.placeId }, (result, status) => {
-          if (status === 'OK') console.log(result);
-        });
       };
 
       const addMapClick = (map) => {
@@ -134,52 +211,23 @@ const PlacesMaps = () => {
         map.addListener('click', (location) => (clickLocation = location));
 
         document
-          .getElementById('mark-on-map')
-          .addEventListener('click', () =>
-            addMarkerAndDetail(clickLocation, map),
-          );
-      };
-
-      const handleNearbySearch = (results, status, map) => {
-        // to do: setState and render results in another component
-        console.log(results);
-        setNearbyResults(results);
-
-        const createMarker = (place) => {
-          new Marker({
-            map: map,
-            position: place.geometry.location,
-          });
-        };
-
-        if (status === 'OK') {
-          results.forEach((result) => {
-            createMarker(result);
-          });
-        }
+          .querySelector('.mark-on-map')
+          .addEventListener('click', () => addMarker(clickLocation, map));
       };
 
       const handlePlaceChanged = (autocomplete, map) => {
-        const resultMarker = new Marker({
-          map: map,
-        });
-
         const place = autocomplete.getPlace();
         console.log(place);
 
         if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
         else map.panTo(place.geometry.location);
 
-        resultMarker.setPosition(place.geometry.location);
+        new Marker({
+          map: map,
+          position: place.geometry.location,
+        });
 
-        const request = {
-          location: place.geometry.location,
-          radius: '500',
-        };
-        const service = new PlacesService(map);
-        service.nearbySearch(request, (results, status) =>
-          handleNearbySearch(results, status, map),
-        );
+        setSearchResults((prev) => [...prev, place]);
       };
 
       const createAutocomplete = (map) => {
@@ -229,7 +277,17 @@ const PlacesMaps = () => {
 
             <Dialog>
               <DialogTrigger>
-                <a className="text-blue-500 hover:text-blue-700">編輯</a>
+                <a
+                  className="text-blue-500 hover:text-blue-700"
+                  onClick={() => {
+                    socket.emit('editLock', {
+                      room: +tripId,
+                      placeId: place.id,
+                    });
+                  }}
+                >
+                  編輯
+                </a>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -241,7 +299,7 @@ const PlacesMaps = () => {
                     type="text"
                     name="tag"
                     className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    value={formData.tag}
+                    value={formData.tag || undefined}
                     onChange={handleChange}
                   />
                 </div>
@@ -251,7 +309,7 @@ const PlacesMaps = () => {
                     type="text"
                     name="type"
                     className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    value={formData.type}
+                    value={formData.type || undefined}
                     onChange={handleChange}
                   />
                 </div>
@@ -312,6 +370,10 @@ const PlacesMaps = () => {
 
   const addNewDay = () => {
     const maxDay = Math.max(...data.map((day) => day.dayNumber));
+    if (maxDay < 0) {
+      setData([{ dayNumber: 1, places: [] }]);
+      return;
+    }
     setData([...data, { dayNumber: maxDay + 1, places: [] }]);
   };
 
@@ -351,12 +413,18 @@ const PlacesMaps = () => {
     );
 
     if (response.status === 200) {
-      socket.emit('addPlaceToTrip', { room: +tripId });
+      socket.emit('addNewPlaceToTrip', { room: +tripId });
+      toast('景點已刪除');
       fetchData();
     }
   };
 
+  function handleChange(event) {
+    setAttendeeEmail(event.target.value);
+  }
+
   const onDragEnd = (result) => {
+    console.log(result);
     const { destination, source, type } = result;
     if (!destination) return;
     if (
@@ -428,6 +496,7 @@ const PlacesMaps = () => {
         socket.emit('addNewPlaceToTrip', { room: +tripId });
         console.log(data);
         toast('景點更新成功');
+        return true;
       } else {
         const json = await response.json();
         console.log(json);
@@ -450,40 +519,120 @@ const PlacesMaps = () => {
         className="mb-8"
         style={{ height: '400px', width: '100%' }}
       ></div>
-      <button
-        id="mark-on-map"
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-      >
+      <button className="mark-on-map bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
         將目前點選標記起來傳給同伴
       </button>
+      <Dialog>
+        <DialogTrigger>
+          <Button>新增參與者</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <form onSubmit={handleAttendeeSubmit}>
+            <label htmlFor="email">E-mail</label>
+            <input
+              type="email"
+              name="email"
+              id="email"
+              onChange={handleChange}
+            />
+            <Button type="submit">新增</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <ul>
+        {searchResults.map((result, index) => (
+          <Dialog
+            key={index}
+            className="cursor-pointer hover:bg-gray-100 p-2 mb-2 rounded"
+          >
+            <li>
+              <DialogTrigger>
+                <h3
+                  onClick={() => {
+                    setCenter(result.geometry.location);
+                  }}
+                  className="mark-on-map text-lg font-bold"
+                >
+                  {result.name}
+                </h3>
+              </DialogTrigger>
+
+              <DialogContent>
+                <h3 className="text-lg font-bold">{result.name}</h3>
+                <p className="text-gray-700">地址: {result.vicinity}</p>
+                {result.price_level && (
+                  <p className="text-gray-700">價位: {result.price_level}</p>
+                )}
+                {result.rating && (
+                  <p className="text-gray-700">評分: {result.rating}</p>
+                )}
+                {result.user_ratings_total && (
+                  <p className="text-gray-700">
+                    評論數: {result.user_ratings_total}
+                  </p>
+                )}
+                {result.types && (
+                  <p className="text-gray-700">
+                    類型: {result.types.join(', ')}
+                  </p>
+                )}
+                <Button onClick={() => addPlaceToTrip(result)}>
+                  新增到行程
+                </Button>
+                <Button onClick={() => handleNearbySearch(map, result)}>
+                  搜尋鄰近景點
+                </Button>
+              </DialogContent>
+            </li>
+          </Dialog>
+        ))}
+      </ul>
 
       <ul className="list-disc pl-4">
         {nearbyResults.map((result, index) => (
-          <li
+          <Dialog
             key={index}
-            onClick={() => addPlaceToTrip(result)}
             className="cursor-pointer hover:bg-gray-100 p-2 mb-2 rounded"
           >
-            <h3 className="text-lg font-bold">{result.name}</h3>
-            <p className="text-gray-700">地址: {result.vicinity}</p>
-            {result.rating && (
-              <p className="text-gray-700">評分: {result.rating}</p>
-            )}
-            {result.types && (
-              <p className="text-gray-700">類型: {result.types.join(', ')}</p>
-            )}
-          </li>
+            <li>
+              <DialogTrigger>
+                <h3 className="text-lg font-bold">{result.name}</h3>
+              </DialogTrigger>
+
+              <DialogContent>
+                <h3 className="text-lg font-bold">{result.name}</h3>
+                <p className="text-gray-700">地址: {result.vicinity}</p>
+                {result.price_level && (
+                  <p className="text-gray-700">價位: {result.price_level}</p>
+                )}
+                {result.rating && (
+                  <p className="text-gray-700">評分: {result.rating}</p>
+                )}
+                {result.user_ratings_total && (
+                  <p className="text-gray-700">
+                    評論數: {result.user_ratings_total}
+                  </p>
+                )}
+                {result.types && (
+                  <p className="text-gray-700">
+                    類型: {result.types.join(', ')}
+                  </p>
+                )}
+                <Button onClick={() => addPlaceToTrip(result)}>
+                  新增到行程
+                </Button>
+                <Button onClick={() => handleNearbySearch(map, result)}>
+                  搜尋鄰近景點
+                </Button>
+              </DialogContent>
+            </li>
+          </Dialog>
         ))}
       </ul>
       <DragDropContext onDragEnd={onDragEnd}>
         <h1 className="text-3xl font-bold mb-4">目前景點</h1>
         <div className="flex">{boards}</div>
-        <button
-          onClick={addNewDay}
-          className="bg-blue-500 text-white p-2 m-4 rounded-lg"
-        >
-          Add a new day
-        </button>
+        <Button onClick={addNewDay}>新增一天</Button>
       </DragDropContext>
     </div>
   );

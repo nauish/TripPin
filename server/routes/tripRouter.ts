@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import authenticateJWT from '../middleware/authentication.js';
+import authenticateJWT, { authenticateJWTOptional } from '../middleware/authentication.js';
 import {
-  addSelfToTrip,
+  addUserToTrip,
   createTrip,
   getTrip,
   getTripAttendees,
@@ -20,14 +20,14 @@ import { getComments, postComment } from '../controllers/comment.js';
 const router = Router();
 
 router.route('/v1/trips').post([authenticateJWT, createTrip]);
-router.route('/v1/trips/:tripId').get([getTrip]).put([putTrip]);
+router.route('/v1/trips/:tripId').get([authenticateJWTOptional, getTrip]).put([putTrip]);
 router
   .route('/v1/trips/:tripId/attendees/')
   .get([authenticateJWT, getTripAttendees])
-  .post([authenticateJWT, addSelfToTrip]);
+  .post([authenticateJWT, addUserToTrip]);
 router
   .route('/v1/trips/:tripId/places/')
-  .get([getTripPlaces])
+  .get([authenticateJWTOptional, getTripPlaces])
   .post([authenticateJWT, createPlace])
   .put([authenticateJWT, putPlaces]);
 router

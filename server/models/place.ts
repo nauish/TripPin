@@ -54,14 +54,16 @@ export async function insertPlace(place: {
 export async function selectPlacesByTripId(TripId: number) {
   const combinedQuery = `
     SELECT 
-      *,
+      p.*,
+      t.privacy_setting,
+      t.user_id,
       ST_X(location::geometry) AS longitude,
       ST_Y(location::geometry) AS latitude,
       (SELECT max(day_number) FROM places WHERE trip_id = $1) AS max_day_number
     FROM places p 
+    LEFT JOIN trips t ON p.trip_id = t.id
     WHERE p.trip_id = $1
   `;
-
   const results = await pool.query(combinedQuery, [TripId]);
 
   return results.rows;

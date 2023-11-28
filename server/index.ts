@@ -27,10 +27,6 @@ app.use(express.json());
 io.on('connection', (socket) => {
   socket.on('joinRoom', (payload) => {
     socket.join(payload.room);
-    // io.sockets.to(payload.room).emit('getMessage', {
-    //   username: 'server',
-    //   message: `${payload.name} joined trip ${payload.room} chat`,
-    // });
   });
   socket.on('getMessage', async (payload) => {
     io.sockets.to(payload.room).emit('getMessage', {
@@ -45,10 +41,14 @@ io.on('connection', (socket) => {
   });
   // Synchronize marking markers on map
   socket.on('getMarker', async (payload) => {
-    io.sockets.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
+    socket.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
   });
   socket.on('addNewPlaceToTrip', (payload) => {
     socket.to(payload.room).emit('addNewPlaceToTrip', payload);
+  });
+
+  socket.on('editLock', (payload) => {
+    socket.to(payload.room).emit('editLock', payload);
   });
 });
 
