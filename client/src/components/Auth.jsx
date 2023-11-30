@@ -47,7 +47,7 @@ export default function Auth() {
           if (intendedPath) {
             localStorage.removeItem('intendedPath');
             navigate(intendedPath);
-          } else navigate('/profile');
+          } else navigate(`users/${result.data.user.id}/trips`);
         }, 500);
       }
     } catch (error) {
