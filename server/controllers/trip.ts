@@ -8,7 +8,7 @@ import {
   updateTrip,
 } from '../models/trip.js';
 import { selectChatByTripId } from '../models/chat.js';
-import { selectPlacesByTripId } from '../models/place.js';
+import { insertPlace, selectPlacesByTripId } from '../models/place.js';
 import { selectUserByEmail } from '../models/user.js';
 
 export async function createTrip(req: Request, res: Response) {
@@ -133,6 +133,48 @@ export async function putTrip(req: Request, res: Response) {
       note,
     });
     return res.status(200).json({ data: { message: 'Update trip successfully' } });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function copyTrip(req: Request, res: Response) {
+  const { tripId } = req.params;
+  const { userId } = res.locals;
+  try {
+    const oldTrip = await selectTripById(+tripId);
+    const newTripId = await insertTrip({
+      user_id: userId,
+      destination: oldTrip[0].destination,
+      name: oldTrip[0].name,
+      budget: oldTrip[0].budget,
+      start_date: oldTrip[0].start_date,
+      end_date: oldTrip[0].end_date,
+      type: oldTrip[0].type,
+      privacy_setting: oldTrip[0].privacy_setting,
+      note: oldTrip[0].note,
+    });
+    const oldTripPlaces = await selectPlacesByTripId(+tripId);
+    oldTripPlaces.forEach(async (place) => {
+      await insertPlace({
+        trip_id: newTripId,
+        user_id: userId,
+        name: place.name,
+        day_number: place.day_number,
+        tag: place.tag,
+        type: place.type,
+        note: place.note,
+        marker_type: place.marker_type,
+        start_hour: place.start_hour,
+        end_hour: place.end_hour,
+        longitude: place.longitude,
+        latitude: place.latitude,
+      });
+    });
+    return res.status(200).json({ data: { newTripId } });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });

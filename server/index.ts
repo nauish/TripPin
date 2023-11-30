@@ -25,9 +25,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 io.on('connection', (socket) => {
-  socket.on('joinRoom', (payload) => {
-    socket.join(payload.room);
-  });
+  socket.on('joinRoom', (payload) => socket.join(payload.room));
   socket.on('getMessage', async (payload) => {
     io.sockets.to(payload.room).emit('getMessage', {
       name: payload.name,
@@ -41,6 +39,7 @@ io.on('connection', (socket) => {
   });
   // Synchronize marking markers on map
   socket.on('getMarker', async (payload) => {
+    console.log(payload);
     socket.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
   });
   socket.on('addNewPlaceToTrip', (payload) => {

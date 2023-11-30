@@ -2,19 +2,14 @@ import { Router } from 'express';
 import authenticateJWT, { authenticateJWTOptional } from '../middleware/authentication.js';
 import {
   addUserToTrip,
+  copyTrip,
   createTrip,
   getTrip,
   getTripAttendees,
   getTripChat,
   putTrip,
 } from '../controllers/trip.js';
-import {
-  createPlace,
-  deletePlaceFromTrip,
-  getTripPlaces,
-  putPlace,
-  putPlaces,
-} from '../controllers/place.js';
+import { createPlace, deletePlaceFromTrip, getTripPlaces, putPlace } from '../controllers/place.js';
 import { getComments, postComment } from '../controllers/comment.js';
 
 const router = Router();
@@ -29,7 +24,7 @@ router
   .route('/v1/trips/:tripId/places/')
   .get([authenticateJWTOptional, getTripPlaces])
   .post([authenticateJWT, createPlace])
-  .put([authenticateJWT, putPlaces]);
+  .put([authenticateJWT, copyTrip]);
 router
   .route('/v1/trips/:tripId/places/:placeId')
   .put([authenticateJWT, putPlace])

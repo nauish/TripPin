@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { deletePlace, insertPlace, selectPlacesByTripId, updatePlace } from '../models/place.js';
-import { selectAttendeesByTripId } from '../models/trip.js';
+import { selectAttendeesByTripId, selectTripById } from '../models/trip.js';
 
 export async function createPlace(req: Request, res: Response) {
   try {
@@ -45,7 +45,10 @@ export async function getTripPlaces(req: Request, res: Response) {
       const attendees = await selectAttendeesByTripId(+tripId);
       const { userId } = res.locals;
 
-      if (!attendees.find((attendee) => +attendee.id === userId)) {
+      if (
+        !attendees.find((attendee) => +attendee.id === userId) &&
+        !+places[0].trip_owner_id === userId
+      ) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
     }
