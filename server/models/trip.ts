@@ -88,8 +88,7 @@ export async function selectAttendeesByTripId(tripId: number) {
     `
     SELECT
           u.id,
-          u.name,
-          u.photo
+          u.name
     FROM attendees a
     LEFT JOIN users u
     ON a.user_id = u.id

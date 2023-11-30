@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { deletePlace, insertPlace, selectPlacesByTripId, updatePlace } from '../models/place.js';
+import { selectAttendeesByTripId, selectTripById } from '../models/trip.js';
 
 export async function createPlace(req: Request, res: Response) {
   try {
@@ -39,6 +40,19 @@ export async function getTripPlaces(req: Request, res: Response) {
   try {
     const { tripId } = req.params;
     const places = await selectPlacesByTripId(+tripId);
+
+    if (places[0] && places[0].privacy_setting === 'private') {
+      const attendees = await selectAttendeesByTripId(+tripId);
+      const { userId } = res.locals;
+
+      if (
+        !attendees.find((attendee) => +attendee.id === userId) &&
+        !+places[0].trip_owner_id === userId
+      ) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+    }
+
     const maxDayNumber = (await places[0]) ? places[0].max_day_number : 0;
     const allDays = Array.from({ length: maxDayNumber }, (_, index) => index + 1);
 

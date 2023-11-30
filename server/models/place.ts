@@ -26,12 +26,13 @@ export async function insertPlace(place: {
   note?: string;
   start_hour?: number;
   end_hour?: number;
+  tag?: number[];
 }) {
   const coordinates = `POINT (${place.longitude} ${place.latitude})`;
   const results = await pool.query(
     `
-    INSERT INTO places (user_id, trip_id, day_number, name, location, marker_type, type, note, start_hour, end_hour)
-    VALUES($1, $2, $3, $4, ST_GeomFromText($5, 4326), $6, $7, $8, $9, $10) RETURNING id
+    INSERT INTO places (user_id, trip_id, day_number, name, location, marker_type, type, note, start_hour, end_hour, tag)
+    VALUES($1, $2, $3, $4, ST_GeomFromText($5, 4326), $6, $7, $8, $9, $10, $11) RETURNING id
   `,
     [
       place.user_id,
@@ -44,6 +45,7 @@ export async function insertPlace(place: {
       place.note,
       place.start_hour,
       place.end_hour,
+      place.tag,
     ],
   );
   const placeId = results.rows[0].id;
@@ -54,14 +56,16 @@ export async function insertPlace(place: {
 export async function selectPlacesByTripId(TripId: number) {
   const combinedQuery = `
     SELECT 
-      *,
+      p.*,
+      t.privacy_setting,
+      t.user_id AS trip_owner_id,
       ST_X(location::geometry) AS longitude,
       ST_Y(location::geometry) AS latitude,
       (SELECT max(day_number) FROM places WHERE trip_id = $1) AS max_day_number
     FROM places p 
+    LEFT JOIN trips t ON p.trip_id = t.id
     WHERE p.trip_id = $1
   `;
-
   const results = await pool.query(combinedQuery, [TripId]);
 
   return results.rows;

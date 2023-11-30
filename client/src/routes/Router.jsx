@@ -17,7 +17,7 @@ import Comment from '@/components/Comment';
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<RootLayout />}>
-      <Route index element={<></>} />
+      <Route index element={<Auth />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/trip" element={<TripForm />} />
         <Route path="users/:userId/trips" element={<MyTrips />} />

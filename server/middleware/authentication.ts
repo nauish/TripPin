@@ -27,11 +27,7 @@ function verifyJWT(token: string): Promise<Decoded> {
   });
 }
 
-export default async function authenticateJWT(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+export default async function authenticateJWT(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.get('Authorization');
     const token = authHeader?.replace('Bearer ', '') || req.cookies.jwt;
@@ -44,6 +40,25 @@ export default async function authenticateJWT(
   } catch (err) {
     if (err instanceof Error) {
       return res.status(401).json({ error: err.message });
+    }
+    return res.status(401).json({ error: 'Authentication failed' });
+  }
+}
+
+export async function authenticateJWTOptional(req: Request, res: Response, next: NextFunction) {
+  try {
+    const authHeader = req.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '') || req.cookies.jwt;
+
+    if (!token) throw new Error('Not providing a token');
+
+    const decoded = await verifyJWT(token);
+    res.locals.userId = decoded.userId;
+    return next();
+  } catch (err) {
+    if (err instanceof Error) {
+      res.locals.userId = '';
+      return next();
     }
     return res.status(401).json({ error: 'Authentication failed' });
   }
