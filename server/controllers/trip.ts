@@ -146,6 +146,7 @@ export async function copyTrip(req: Request, res: Response) {
   const { userId } = res.locals;
   try {
     const oldTrip = await selectTripById(+tripId);
+    const oldTripPlaces = await selectPlacesByTripId(+tripId);
     const newTripId = await insertTrip({
       user_id: userId,
       destination: oldTrip[0].destination,
@@ -157,7 +158,6 @@ export async function copyTrip(req: Request, res: Response) {
       privacy_setting: oldTrip[0].privacy_setting,
       note: oldTrip[0].note,
     });
-    const oldTripPlaces = await selectPlacesByTripId(+tripId);
     oldTripPlaces.forEach(async (place) => {
       await insertPlace({
         trip_id: newTripId,
