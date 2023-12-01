@@ -5,38 +5,84 @@ import { useSocket } from '../context/SocketContext';
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
-
+  const [answer, setAnswer] = useState('');
   const socket = useSocket();
   const params = useParams();
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
+    // fetch message history
     fetch(
       `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${params.tripId}/chat`,
     )
       .then((response) => response.json())
-      .then((data) => setMessages(data.data));
-    initWebSocket();
-  }, []);
+      .then((data) => {
+        setMessages(data.data);
+      });
 
-  const initWebSocket = () => {
-    socket.emit('joinRoom', { name: user.name, room: +params.tripId });
-    socket.on('getMessage', (message) => {
+    socket.emit('newUserInRoom', { name: user.name, room: params.tripId });
+    socket.on('newChatMessage', (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
     });
+
+    return () => {
+      socket.off('newChatMessage');
+    };
+  }, []);
+
+  const sendPromptToServerToGPT = async () => {
+    try {
+      const userPrompt = messageInput.replace('/ai', '');
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${
+          params.tripId
+        }/chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: JSON.stringify({ userPrompt }),
+        },
+      );
+      if (!response.ok || !response.body) {
+        throw response.statusText;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      const isReceiving = true;
+
+      while (isReceiving) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const decodedChunk = decoder.decode(value, { stream: true });
+        setAnswer((answer) => answer + decodedChunk);
+      }
+
+      setAnswer('');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const sendMessage = () => {
     const trimmedMessage = messageInput.trim();
+
+    const newChatMessage = {
+      user_id: user.id,
+      name: user.name,
+      room: params.tripId,
+      message: messageInput.trim(),
+    };
+
     if (trimmedMessage !== '') {
-      socket.emit('getMessage', {
-        user_id: user.id,
-        name: user.name,
-        room: +params.tripId,
-        message: trimmedMessage,
-      });
-      setMessageInput('');
+      socket.emit('newChatMessage', newChatMessage);
+      setMessages((prevMessages) => [...prevMessages, newChatMessage]);
     }
+
+    if (trimmedMessage.startsWith('/ai')) sendPromptToServerToGPT();
+    setMessageInput('');
   };
 
   const handleInputChange = (event) => {
@@ -58,6 +104,7 @@ const Chat = () => {
             {message.name}: {message.message}
           </p>
         ))}
+        <p className="text-gray-700 mb-2">{answer}</p>
       </div>
       <div className="flex items-center">
         <input

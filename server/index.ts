@@ -15,9 +15,11 @@ dotenv.config();
 const app = express();
 
 const server = http.createServer(app);
-const io = new Server(server, {
+
+export const io = new Server(server, {
   cors: {},
 });
+
 const port = process.env.PORT || 3000;
 
 app.use(cors());
@@ -25,9 +27,9 @@ app.use(cookieParser());
 app.use(express.json());
 
 io.on('connection', (socket) => {
-  socket.on('joinRoom', (payload) => socket.join(payload.room));
-  socket.on('getMessage', async (payload) => {
-    io.sockets.to(payload.room).emit('getMessage', {
+  socket.on('newUserInRoom', (payload) => socket.join(payload.room));
+  socket.on('newChatMessage', async (payload) => {
+    socket.to(payload.room).emit('newChatMessage', {
       name: payload.name,
       message: payload.message,
     });

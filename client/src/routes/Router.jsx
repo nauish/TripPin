@@ -13,11 +13,12 @@ import MyTrips from '../components/Trips';
 import TripForm from '../components/TripForm';
 import PlacesMaps from '../components/PlaceMaps';
 import Comment from '@/components/Comment';
+import Hero from '@/components/Hero';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<RootLayout />}>
-      <Route index element={<Auth />} />
+      <Route index element={<Hero />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/trip" element={<TripForm />} />
         <Route path="users/:userId/trips" element={<MyTrips />} />
