@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
+import { Card } from '@/components/ui/card';
+import { IoMdSend } from 'react-icons/io';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -97,32 +102,45 @@ const Chat = () => {
   };
 
   return (
-    <div className="fixed bottom-0 right-0 z-10 max-w-md p-4 bg-gray-50 rounded-lg shadow-md">
-      <div className="mb-4">
-        {messages.map((message, index) => (
-          <p key={index} className="text-gray-700 mb-2">
-            {message.name}: {message.message}
-          </p>
-        ))}
-        <p className="text-gray-700 mb-2">{answer}</p>
-      </div>
+    <Card className="fixed bottom-0 right-0 z-10 max-w-md p-4 rounded-lg shadow-sm">
+      {messages.map((message, index) => (
+        <div key={index} className="flex space-y-4">
+          <div></div>
+          <Avatar
+            className={`mr-1 ${
+              +message.user_id === user.id ? 'ml-auto hidden' : ''
+            }`}
+          >
+            <AvatarImage src={message.photo} />
+            <AvatarFallback>{message.name}</AvatarFallback>
+          </Avatar>
+          <div
+            className={`flex w-max max-w-[75%] flex-col gap-2 rounded-lg px-3 py-2 text-sm ${
+              +message.user_id === user.id
+                ? 'ml-auto text-white bg-gray-800'
+                : 'bg-muted'
+            }`}
+          >
+            {message.message}
+          </div>
+        </div>
+      ))}
+      <p className="text-gray-700 mb-2">{answer}</p>
+
       <div className="flex items-center">
-        <input
+        <Input
           type="text"
           value={messageInput}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="輸入訊息"
-          className="flex-grow py-2 px-4 border border-gray-300 rounded"
+          className="flex-grow mr-2"
         />
-        <button
-          className="bg-green-500 text-white py-2 px-4 rounded ml-2"
-          onClick={sendMessage}
-        >
-          傳送
-        </button>
+        <Button onClick={sendMessage} disabled={messageInput.trim('') === ''}>
+          <IoMdSend />
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 };
 
