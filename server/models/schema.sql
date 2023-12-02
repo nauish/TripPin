@@ -87,3 +87,19 @@ CREATE TABLE trip_comments (
   FOREIGN KEY (user_id) REFERENCES users (id),
   FOREIGN KEY (trip_id) REFERENCES trips (id)
 );
+
+CREATE TABLE checklists (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  trip_id BIGINT NOT NULL REFERENCES trips(id) 
+);
+
+CREATE TABLE checklist_items (
+  id SERIAL PRIMARY KEY, 
+  name VARCHAR(100) NOT NULL, 
+  item_order BIGINT NOT NULL,
+  is_checked BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  checklist_id INT NOT NULL REFERENCES checklists(id)
+);
