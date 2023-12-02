@@ -21,43 +21,47 @@ import {
   putChecklist,
   putChecklistItem,
 } from '../controllers/checklist.js';
+import { checkTripAttendees, checkTripAttendeesOptional } from '../middleware/attendees.js';
 
 const router = Router();
 
 router.route('/v1/trips').post([authenticateJWT, createTrip]);
-router.route('/v1/trips/:tripId').get([authenticateJWTOptional, getTrip]).put([putTrip]);
+router
+  .route('/v1/trips/:tripId')
+  .get([authenticateJWTOptional, checkTripAttendees, getTrip])
+  .put([authenticateJWT, checkTripAttendees, putTrip]);
 router
   .route('/v1/trips/:tripId/attendees/')
-  .get([authenticateJWT, getTripAttendees])
+  .get([authenticateJWTOptional, checkTripAttendees, getTripAttendees])
   .post([authenticateJWT, addUserToTrip]);
 router
   .route('/v1/trips/:tripId/places/')
-  .get([authenticateJWTOptional, getTripPlaces])
-  .post([authenticateJWT, createPlace])
+  .get([authenticateJWTOptional, checkTripAttendeesOptional, getTripPlaces])
+  .post([authenticateJWT, checkTripAttendees, createPlace])
   .put([authenticateJWT, copyTrip]);
 router
   .route('/v1/trips/:tripId/places/:placeId')
-  .put([authenticateJWT, putPlace])
-  .delete([authenticateJWT, deletePlaceFromTrip]);
+  .put([authenticateJWT, checkTripAttendees, putPlace])
+  .delete([authenticateJWT, checkTripAttendees, deletePlaceFromTrip]);
 router
   .route('/v1/trips/:tripId/chat')
-  .get([getTripChat])
-  .post([authenticateJWT, getChatCompletion]);
+  .get([authenticateJWTOptional, checkTripAttendees, getTripChat])
+  .post([authenticateJWT, checkTripAttendees, getChatCompletion]);
 router.route('/v1/trips/:tripId/comments').get([getComments]).post([postComment]);
 router
   .route('/v1/trips/:tripId/checklists')
-  .get([authenticateJWT, getChecklists])
-  .post([authenticateJWT, createChecklist]);
+  .get([authenticateJWTOptional, checkTripAttendeesOptional, getChecklists])
+  .post([authenticateJWT, checkTripAttendees, createChecklist]);
 router
   .route('/v1/trips/:tripId/checklists/:checklistId')
-  .put([authenticateJWT, putChecklist])
-  .delete([authenticateJWT, deleteChecklist]);
+  .put([authenticateJWT, checkTripAttendees, putChecklist])
+  .delete([authenticateJWT, checkTripAttendees, deleteChecklist]);
 router
   .route('/v1/trips/:tripId/checklists/:checklistId/items')
-  .post([authenticateJWT, createChecklistItem]);
+  .post([authenticateJWT, checkTripAttendees, createChecklistItem]);
 router
   .route('/v1/trips/:tripId/checklists/:checklistId/items/:itemId')
-  .put([authenticateJWT, putChecklistItem])
-  .delete([authenticateJWT, deleteChecklistItem]);
+  .put([authenticateJWT, checkTripAttendees, putChecklistItem])
+  .delete([authenticateJWT, checkTripAttendees, deleteChecklistItem]);
 
 export default router;

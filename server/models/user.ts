@@ -10,6 +10,10 @@ const UserSchema = z.object({
   token: z.string(),
 });
 
+const AttendeeSchema = z.object({
+  user_id: z.coerce.number(),
+});
+
 export async function insertUser(
   email: string,
   name: string,
@@ -50,4 +54,19 @@ export async function selectUserById(id: number) {
   );
   const [user] = z.array(UserSchema).parse(results.rows);
   return user;
+}
+
+export async function selectAttendeesByTripIdAndUserId(tripId: number, userId: number) {
+  const results = await pool.query(
+    `
+    SELECT a.user_id FROM attendees a
+    WHERE trip_id = $1 AND a.user_id = $2
+    UNION ALL
+    SELECT t.user_id FROM trips t
+    WHERE t.id = $1 AND t.user_id = $2
+  `,
+    [tripId, userId],
+  );
+  const [attendees] = z.array(AttendeeSchema).parse(results.rows);
+  return attendees.user_id;
 }
