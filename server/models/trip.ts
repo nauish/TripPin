@@ -1,18 +1,6 @@
 // import { z } from 'zod';
+import PRIVACY_SETTING from '../constants/privacySetting.js';
 import pool from './dbPools.js';
-
-// const TripSchema = z.object({
-//   id: z.coerce.number(),
-//   user_id: z.coerce.number(),
-//   name: z.string(),
-//   destination: z.string().nullable(),
-//   start_date: z.date().nullable(),
-//   end_date: z.date().nullable(),
-//   budget: z.number().nullable(),
-//   type: z.string().nullable(),
-//   privacy_setting: z.string(),
-//   note: z.string().nullable(),
-// });
 
 /**
   CREATE TABLE attendees (
@@ -99,8 +87,26 @@ export async function selectAttendeesByTripId(tripId: number) {
   return results.rows;
 }
 
+export async function selectPublicTripsByUserId(userId: number) {
+  const results = await pool.query(
+    ` SELECT * 
+      FROM trips 
+      WHERE user_id = $1
+      AND privacy_setting = $2 `,
+    [userId, PRIVACY_SETTING.PUBLIC],
+  );
+  const trips = results.rows;
+  return trips;
+}
+
 export async function selectTripsByUserId(userId: number) {
-  const results = await pool.query('SELECT * FROM trips WHERE user_id = $1', [userId]);
+  const results = await pool.query(
+    ` SELECT * 
+      FROM trips 
+      WHERE user_id = $1
+    `,
+    [userId],
+  );
   const trips = results.rows;
   return trips;
 }
@@ -143,4 +149,16 @@ export async function updateTrip(trip: {
     ],
   );
   return results.rows;
+}
+
+export async function selectPrivacyByTripId(tripId: number) {
+  const results = await pool.query(
+    `
+    SELECT privacy_setting FROM trips
+    WHERE id = $1
+  `,
+    [tripId],
+  );
+  const [trip] = results.rows;
+  return trip.privacy_setting;
 }

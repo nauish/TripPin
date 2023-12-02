@@ -3,6 +3,7 @@ import {
   insertAttendee,
   insertTrip,
   selectAttendeesByTripId,
+  selectPublicTripsByUserId,
   selectTripById,
   selectTripsByUserId,
   updateTrip,
@@ -10,6 +11,7 @@ import {
 import { selectChatByTripId } from '../models/chat.js';
 import { insertPlace, selectPlacesByTripId } from '../models/place.js';
 import { selectUserByEmail } from '../models/user.js';
+import { ValidationError } from '../middleware/errorHandler.js';
 
 export async function createTrip(req: Request, res: Response) {
   try {
@@ -40,12 +42,6 @@ export async function getTrip(req: Request, res: Response) {
     const { tripId } = req.params;
     const data = await selectTripById(+tripId);
 
-    if (data[0].privacy_setting === 'private') {
-      const { userId } = res.locals;
-      if (data[0].user_id !== userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-    }
     return res.json({ data });
   } catch (error) {
     if (error instanceof Error) {
@@ -90,14 +86,21 @@ export async function addUserToTrip(req: Request, res: Response) {
 }
 
 export async function getTripsCreatedByUser(req: Request, res: Response) {
-  const { userId } = res.locals;
-
   try {
-    const data = await selectTripsByUserId(+userId);
+    const { userId } = req.params;
+
+    let data = [];
+
+    if (+userId === res.locals.userId) data = await selectTripsByUserId(+userId);
+    else data = await selectPublicTripsByUserId(+userId);
+
     return res.status(200).json({ data });
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof ValidationError) {
       return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
     }
     return res.status(500).json({ error: 'Something went wrong' });
   }
