@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { insertChat } from '../models/chat.js';
-import { io } from '../index.js';
+import getSocketIOInstance from '../socketServer.js';
 
 export async function getChatCompletion(req: Request, res: Response) {
   const client = new OpenAI({
@@ -41,6 +41,7 @@ export async function getChatCompletion(req: Request, res: Response) {
     res.end();
     const fullMessage = chunk.join('');
 
+    const io = getSocketIOInstance();
     io.sockets
       .to(req.params.tripId)
       .emit('newChatMessage', { name: 'AI小助手', message: fullMessage });
