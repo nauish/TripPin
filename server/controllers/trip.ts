@@ -3,7 +3,6 @@ import {
   insertAttendee,
   insertTrip,
   selectAttendeesByTripId,
-  selectPublicTripsByUserId,
   selectTripById,
   selectTripsByUserId,
   updateTrip,
@@ -12,11 +11,13 @@ import { selectChatByTripId } from '../models/chat.js';
 import { insertPlace, selectPlacesByTripId } from '../models/place.js';
 import { selectUserByEmail } from '../models/user.js';
 import { ValidationError } from '../middleware/errorHandler.js';
+import PRIVACY_SETTING from '../constants/privacySetting.js';
 
 export async function createTrip(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
     const { name, destination, budget, startDate, endDate, privacySetting, type, note } = req.body;
+    if (!name || !privacySetting) throw new ValidationError('Missing required fields');
     const tripId = await insertTrip({
       user_id: userId,
       destination,
@@ -25,7 +26,7 @@ export async function createTrip(req: Request, res: Response) {
       start_date: startDate === '' ? null : startDate,
       end_date: endDate === '' ? null : endDate,
       type,
-      privacy_setting: privacySetting ?? 'Private',
+      privacy_setting: privacySetting ?? PRIVACY_SETTING.PUBLIC,
       note,
     });
     return res.json({ data: { tripId } });
@@ -91,8 +92,8 @@ export async function getTripsCreatedByUser(req: Request, res: Response) {
 
     let data = [];
 
-    if (+userId === res.locals.userId) data = await selectTripsByUserId(+userId);
-    else data = await selectPublicTripsByUserId(+userId);
+    if (+userId === res.locals.userId) data = await selectTripsByUserId(+userId, true);
+    else data = await selectTripsByUserId(+userId, false);
 
     return res.status(200).json({ data });
   } catch (error) {
@@ -123,6 +124,10 @@ export async function putTrip(req: Request, res: Response) {
   const { tripId } = req.params;
   const { name, destination, budget, startDate, endDate, privacySetting, type, note } = req.body;
 
+  if (!name || !privacySetting) {
+    throw new ValidationError('Missing required fields');
+  }
+
   try {
     await updateTrip({
       id: +tripId,
@@ -137,8 +142,11 @@ export async function putTrip(req: Request, res: Response) {
     });
     return res.status(200).json({ data: { message: 'Update trip successfully' } });
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof ValidationError) {
       return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
     }
     return res.status(500).json({ error: 'Something went wrong' });
   }

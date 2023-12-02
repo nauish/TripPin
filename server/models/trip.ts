@@ -87,28 +87,14 @@ export async function selectAttendeesByTripId(tripId: number) {
   return results.rows;
 }
 
-export async function selectPublicTripsByUserId(userId: number) {
+export async function selectTripsByUserId(userId: number, isPrivateTrip: boolean) {
   const results = await pool.query(
-    ` SELECT * 
-      FROM trips 
-      WHERE user_id = $1
-      AND privacy_setting = $2 `,
-    [userId, PRIVACY_SETTING.PUBLIC],
+    isPrivateTrip
+      ? 'SELECT * FROM trips WHERE user_id = $1'
+      : 'SELECT * FROM trips WHERE user_id = $1  AND privacy_setting = $2',
+    isPrivateTrip ? [userId] : [userId, PRIVACY_SETTING.PUBLIC],
   );
-  const trips = results.rows;
-  return trips;
-}
-
-export async function selectTripsByUserId(userId: number) {
-  const results = await pool.query(
-    ` SELECT * 
-      FROM trips 
-      WHERE user_id = $1
-    `,
-    [userId],
-  );
-  const trips = results.rows;
-  return trips;
+  return results.rows;
 }
 
 export async function updateTrip(trip: {

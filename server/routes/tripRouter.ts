@@ -45,7 +45,7 @@ router
   .delete([authenticateJWT, checkTripAttendees, deletePlaceFromTrip]);
 router
   .route('/v1/trips/:tripId/chat')
-  .get([authenticateJWTOptional, checkTripAttendees, getTripChat])
+  .get([authenticateJWT, checkTripAttendees, getTripChat])
   .post([authenticateJWT, checkTripAttendees, getChatCompletion]);
 router.route('/v1/trips/:tripId/comments').get([getComments]).post([postComment]);
 router
