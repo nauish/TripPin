@@ -2,26 +2,39 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { Card } from '@/components/ui/card';
-import { IoMdSend } from 'react-icons/io';
+import {
+  IoMdSend,
+  IoIosChatboxes,
+  IoMdCloseCircleOutline,
+} from 'react-icons/io';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { ScrollArea } from './ui/scroll-area';
 
-const Chat = () => {
+const ChatWindow = ({ onClose }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
   const [answer, setAnswer] = useState('');
   const socket = useSocket();
   const params = useParams();
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = JSON.parse(localStorage.getItem('user')) || {};
 
   useEffect(() => {
     // fetch message history
     fetch(
       `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${params.tripId}/chat`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      },
     )
       .then((response) => response.json())
       .then((data) => {
+        console.log('data', data);
         setMessages(data.data);
       });
 
@@ -78,7 +91,7 @@ const Chat = () => {
       user_id: user.id,
       name: user.name,
       room: params.tripId,
-      message: messageInput.trim(),
+      message: trimmedMessage,
     };
 
     if (trimmedMessage !== '') {
@@ -102,45 +115,78 @@ const Chat = () => {
   };
 
   return (
-    <Card className="fixed bottom-0 right-0 z-10 max-w-md p-4 rounded-lg shadow-sm">
-      {messages.map((message, index) => (
-        <div key={index} className="flex space-y-4">
-          <div></div>
-          <Avatar
-            className={`mr-1 ${
-              +message.user_id === user.id ? 'ml-auto hidden' : ''
-            }`}
-          >
-            <AvatarImage src={message.photo} />
-            <AvatarFallback>{message.name}</AvatarFallback>
-          </Avatar>
-          <div
-            className={`flex w-max max-w-[75%] flex-col gap-2 rounded-lg px-3 py-2 text-sm ${
-              +message.user_id === user.id
-                ? 'ml-auto text-white bg-gray-800'
-                : 'bg-muted'
-            }`}
-          >
-            {message.message}
+    messages && (
+      <Card className="fixed bottom-5 right-5 z-10 max-w-sm">
+        <div className="text-white bg-gray-800 flex justify-end items-center pr-4 rounded-t-md py-2 text-lg">
+          <IoMdCloseCircleOutline onClick={onClose} />
+        </div>
+        <div className="pb-2 px-2">
+          <ScrollArea className="h-72">
+            {messages.map((message, index) => (
+              <div key={index} className="flex py-2 pl-2 pr-4">
+                <Avatar
+                  className={`mr-1 ${
+                    +message.user_id === user.id ? 'ml-auto hidden' : ''
+                  }`}
+                >
+                  <AvatarImage src={message.photo} />
+                  <AvatarFallback>{message.name[0]}</AvatarFallback>
+                </Avatar>
+                <div
+                  className={`flex flex-col gap-2 rounded-lg px-3 py-2 text-sm ${
+                    message.user_id === user.id
+                      ? 'ml-auto text-white bg-gray-800'
+                      : 'bg-muted'
+                  }`}
+                >
+                  {message.message}
+                </div>
+              </div>
+            ))}
+          </ScrollArea>
+          <p className="text-gray-700 mb-2">{answer}</p>
+
+          <div className="flex items-center">
+            <Input
+              type="text"
+              value={messageInput}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="輸入訊息"
+              className="flex-grow mr-2"
+            />
+            <Button
+              onClick={sendMessage}
+              disabled={messageInput.trim('') === ''}
+            >
+              <IoMdSend />
+            </Button>
           </div>
         </div>
-      ))}
-      <p className="text-gray-700 mb-2">{answer}</p>
+      </Card>
+    )
+  );
+};
 
-      <div className="flex items-center">
-        <Input
-          type="text"
-          value={messageInput}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder="輸入訊息"
-          className="flex-grow mr-2"
-        />
-        <Button onClick={sendMessage} disabled={messageInput.trim('') === ''}>
-          <IoMdSend />
-        </Button>
-      </div>
-    </Card>
+const Chat = () => {
+  const [isChatWindowOpen, setIsChatWindowOpen] = useState(false);
+
+  const handleChatButtonClick = () => {
+    setIsChatWindowOpen(!isChatWindowOpen);
+  };
+
+  return (
+    <>
+      {!isChatWindowOpen && (
+        <div
+          onClick={handleChatButtonClick}
+          className="fixed flex justify-center items-center bottom-5 right-5 z-10 max-w-md px-4 bg-gray-800 h-14 w-14 rounded-full cursor-pointer"
+        >
+          <IoIosChatboxes className="text-white text-3xl" />
+        </div>
+      )}
+      {isChatWindowOpen && <ChatWindow onClose={handleChatButtonClick} />}
+    </>
   );
 };
 
