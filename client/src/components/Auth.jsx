@@ -10,7 +10,7 @@ export default function Auth() {
 
   const navigate = useNavigate();
 
-  const provider = 'native';
+  const PROVIDER = 'native';
 
   const handleFormSubmit = async (event, endpoint) => {
     event.preventDefault();
@@ -26,18 +26,17 @@ export default function Auth() {
           body: JSON.stringify({
             name,
             email,
-            provider,
+            provider: PROVIDER,
             password,
           }),
         },
       );
 
-      if (!response.ok)
-        console.error('Error:', response.status, response.statusText);
-
       const result = await response.json();
       const SUCCESSFUL_LOGIN_MESSAGE = '帳號密碼登入成功！';
-      result.error ? toast(result.error) : toast(SUCCESSFUL_LOGIN_MESSAGE);
+      result.error
+        ? toast.error(result.error)
+        : toast(SUCCESSFUL_LOGIN_MESSAGE);
 
       if (result.data.access_token) {
         localStorage.setItem('accessToken', result.data.access_token);
@@ -47,7 +46,7 @@ export default function Auth() {
           if (intendedPath) {
             localStorage.removeItem('intendedPath');
             navigate(intendedPath);
-          } else navigate(`users/${result.data.user.id}/trips`);
+          } else navigate(`/users/${result.data.user.id}/trips`);
         }, 500);
       }
     } catch (error) {
