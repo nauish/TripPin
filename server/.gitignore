@@ -4,3 +4,4 @@ uploads/*
 !uploads/.gitkeep 
 backup.sql
 .env
+public

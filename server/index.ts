@@ -3,11 +3,11 @@ import dotenv from 'dotenv';
 import http from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { initSocketIO } from './socketServer.js';
 import userRouter from './routes/userRouter.js';
 import authRouter from './routes/authRouter.js';
 import tripRouter from './routes/tripRouter.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { initSocketIO } from './controllers/socketio.js';
 
 dotenv.config();
 
@@ -24,6 +24,12 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use('/api', [userRouter, tripRouter, authRouter]);
+
+app.use(express.static('public'));
+
+app.get('/*', (req, res) => {
+  res.sendFile('index.html', { root: 'public' });
+});
 
 app.use(errorHandler);
 
