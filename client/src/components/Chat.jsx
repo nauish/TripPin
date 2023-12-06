@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { Card } from '@/components/ui/card';
@@ -19,6 +19,7 @@ const ChatWindow = ({ onClose }) => {
   const socket = useSocket();
   const params = useParams();
   const user = JSON.parse(localStorage.getItem('user')) || {};
+  const ref = useRef(null);
 
   useEffect(() => {
     // fetch message history
@@ -34,8 +35,10 @@ const ChatWindow = ({ onClose }) => {
     )
       .then((response) => response.json())
       .then((data) => {
-        console.log('data', data);
         setMessages(data.data);
+      })
+      .catch((err) => {
+        console.error(err);
       });
 
     socket.emit('newUserInRoom', { name: user.name, room: params.tripId });
@@ -116,9 +119,12 @@ const ChatWindow = ({ onClose }) => {
 
   return (
     messages && (
-      <Card className="fixed bottom-5 right-5 z-10 max-w-sm">
-        <div className="text-white bg-gray-800 flex justify-end items-center pr-4 rounded-t-md py-2 text-lg">
-          <IoMdCloseCircleOutline onClick={onClose} />
+      <Card className="fixed bottom-5 right-14 z-10 max-w-sm rounded-xl">
+        <div className="text-white bg-white flex justify-end items-center pr-4 rounded-t-md py-2 text-lg">
+          <IoMdCloseCircleOutline
+            onClick={onClose}
+            className="cursor-pointer text-black"
+          />
         </div>
         <div className="pb-2 px-2">
           <ScrollArea className="h-72">
@@ -141,10 +147,20 @@ const ChatWindow = ({ onClose }) => {
                 >
                   {message.message}
                 </div>
+                <div ref={ref}></div>
               </div>
             ))}
           </ScrollArea>
-          <p className="text-gray-700 mb-2">{answer}</p>
+          {answer && (
+            <div className="flex py-2 pl-2 pr-4">
+              <Avatar className="mr-1">
+                <AvatarFallback>A</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-2 rounded-lg px-3 py-2 text-sm bg-muted">
+                {answer}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center">
             <Input
@@ -180,9 +196,9 @@ const Chat = () => {
       {!isChatWindowOpen && (
         <div
           onClick={handleChatButtonClick}
-          className="fixed flex justify-center items-center bottom-5 right-5 z-10 max-w-md px-4 bg-gray-800 h-14 w-14 rounded-full cursor-pointer"
+          className="fixed flex justify-center items-center bottom-5 right-14 z-10 max-w-md px-4 bg-white h-14 w-14 rounded-full cursor-pointer"
         >
-          <IoIosChatboxes className="text-white text-3xl" />
+          <IoIosChatboxes className=" text-3xl" />
         </div>
       )}
       {isChatWindowOpen && <ChatWindow onClose={handleChatButtonClick} />}
