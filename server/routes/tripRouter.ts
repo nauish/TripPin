@@ -9,7 +9,13 @@ import {
   getTripChat,
   putTrip,
 } from '../controllers/trip.js';
-import { createPlace, deletePlaceFromTrip, getTripPlaces, putPlace } from '../controllers/place.js';
+import {
+  createPlace,
+  deletePlaceFromTrip,
+  getTripPlaces,
+  putPlace,
+  putPlaceOrder,
+} from '../controllers/place.js';
 import { getComments, postComment } from '../controllers/comment.js';
 import { getChatCompletion } from '../controllers/chat.js';
 import {
@@ -28,17 +34,20 @@ const router = Router();
 router.route('/v1/trips').post([authenticateJWT, createTrip]);
 router
   .route('/v1/trips/:tripId')
-  .get([authenticateJWTOptional, checkTripAttendees, getTrip])
+  .get([authenticateJWTOptional, checkTripAttendeesOptional, getTrip])
   .put([authenticateJWT, checkTripAttendees, putTrip]);
 router
   .route('/v1/trips/:tripId/attendees/')
-  .get([authenticateJWTOptional, checkTripAttendees, getTripAttendees])
+  .get([authenticateJWTOptional, checkTripAttendeesOptional, getTripAttendees])
   .post([authenticateJWT, addUserToTrip]);
 router
   .route('/v1/trips/:tripId/places/')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTripPlaces])
   .post([authenticateJWT, checkTripAttendees, createPlace])
   .put([authenticateJWT, copyTrip]);
+router
+  .route('/v1/trips/:tripId/places/orders')
+  .put([authenticateJWT, checkTripAttendees, putPlaceOrder]);
 router
   .route('/v1/trips/:tripId/places/:placeId')
   .put([authenticateJWT, checkTripAttendees, putPlace])

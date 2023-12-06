@@ -64,9 +64,24 @@ export async function selectAttendeesByTripIdAndUserId(tripId: number, userId: n
     UNION ALL
     SELECT t.user_id FROM trips t
     WHERE t.id = $1 AND t.user_id = $2
-  `,
+    `,
     [tripId, userId],
   );
+
   const [attendees] = z.array(AttendeeSchema).parse(results.rows);
   return attendees.user_id;
+}
+
+export async function selectTripsAttendedByUser(userId: number) {
+  const results = await pool.query(
+    `
+    SELECT t.id, t.name, t.destination, t.start_date, t.end_date, t.budget, t.type, t.privacy_setting, t.note, t.photo
+    FROM trips t
+    JOIN attendees a ON t.id = a.trip_id
+    WHERE a.user_id = $1
+    `,
+    [userId],
+  );
+
+  return results.rows;
 }
