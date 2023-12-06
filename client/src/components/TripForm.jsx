@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
-import Map from './Map';
-import Autocomplete from './Autocomplete';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 const TripForm = ({ className }) => {
   const [formData, setFormData] = useState({
@@ -10,17 +16,56 @@ const TripForm = ({ className }) => {
     destination: '',
     startDate: '',
     endDate: '',
-    budget: '',
+    budget: 0,
     type: '',
     privacySetting: 'public',
+    photo: '',
     note: '',
   });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    console.log(e.target);
     setFormData({
       ...formData,
       [name]: value,
+    });
+  };
+
+  const handleImageSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery) {
+      toast('請輸入搜尋關鍵字！');
+      return;
+    }
+
+    const accessKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
+    const apiUrl = `https://api.unsplash.com/search/photos?query=${searchQuery}&client_id=${accessKey}`;
+
+    try {
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSearchResults(data.results);
+    } catch (error) {
+      console.error('Error fetching data:', error.message);
+    }
+  };
+
+  const handleImageSelect = (e, imageUrl) => {
+    e.preventDefault();
+    console.log(imageUrl);
+    setFormData({
+      ...formData,
+      photo: imageUrl,
     });
   };
 
@@ -43,6 +88,13 @@ const TripForm = ({ className }) => {
         console.error('Error:', response.status, response.statusText);
 
       const result = await response.json();
+      if (result.error) {
+        toast(result.error);
+        return;
+      }
+
+      toast('新增成功！');
+      navigate(`/user/trips`);
       console.log(result);
     } catch (error) {
       console.error('Error:', error);
@@ -72,6 +124,7 @@ const TripForm = ({ className }) => {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               type="text"
               name="name"
+              required
               value={formData.name}
               onChange={handleChange}
             />
@@ -84,7 +137,7 @@ const TripForm = ({ className }) => {
             >
               旅遊地點 (城市、國家)
             </label>
-            <Autocomplete
+            <input
               id="destination"
               name="destination"
               value={formData.destination}
@@ -92,7 +145,62 @@ const TripForm = ({ className }) => {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             />
           </div>
-
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="photo"
+            >
+              選擇圖片
+            </label>
+            <div className="flex">
+              <input
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                type="text"
+                placeholder="搜尋圖片"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button
+                className="ml-2 bg-blue-500 text-white font-bold py-2 px-2 rounded focus:outline-none focus:shadow-outline"
+                type="button"
+                onClick={handleImageSearch}
+              >
+                搜尋
+              </button>
+            </div>
+            <div className="flex flex-wrap mt-2">
+              {searchResults.map((result) => (
+                <div key={result.id} className="relative m-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <div>
+                          <img
+                            src={result.urls.thumb}
+                            alt={result.alt_description}
+                            className="w-16 h-16 object-cover cursor-pointer border border-transparent hover:border-blue-500"
+                            onClick={(e) => {
+                              handleImageSelect(e, result.urls.small);
+                            }}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <img
+                          src={result.urls.regular}
+                          alt={result.alt_description}
+                          className="w-52 h-52 object-cover cursor-pointer border border-transparent hover:border-blue-500"
+                          onClick={(e) => {
+                            handleImageSelect(e, result.urls.small);
+                          }}
+                        />
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="mb-4">
             <label
               className="block text-gray-700 text-sm font-bold mb-2"
@@ -189,12 +297,6 @@ const TripForm = ({ className }) => {
           </div>
           <Button type="submit">新建行程</Button>
         </form>
-        <Map
-          className="w-full h-[100vh]"
-          latitude={23.553118}
-          longitude={121.0211024}
-          zoom={8}
-        />
       </div>
     </>
   );
