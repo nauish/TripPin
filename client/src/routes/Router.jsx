@@ -9,29 +9,32 @@ import ErrorHandler from '../components/Error';
 import RootLayout from '../layouts/RootLayout';
 import Profile from '../components/Profile';
 import ProtectedRoute from './ProtectedRoute';
-import MyTrips from '../components/Trips';
+import MyTrips from '../pages/MyTrips';
 import TripForm from '../components/TripForm';
 import PlacesMaps from '../components/PlaceMaps';
-import Comment from '@/components/Comment';
 import Hero from '@/components/Hero';
+import SavedTrips from '@/pages/SavedTrips';
+import AttendedTrips from '@/pages/AttendedTrips';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<RootLayout />}>
       <Route index element={<Hero />} />
+      <Route
+        path="/trips/:tripId"
+        element={
+          <>
+            <PlacesMaps />
+            <Chat />
+          </>
+        }
+      />
       <Route element={<ProtectedRoute />}>
         <Route path="/trip" element={<TripForm />} />
-        <Route path="users/:userId/trips" element={<MyTrips />} />
-        <Route
-          path="/trips/:tripId"
-          element={
-            <>
-              <PlacesMaps className="h-[400px] w-full" />
-              <Chat />
-              <Comment />
-            </>
-          }
-        />
+        <Route path="/users/:userId/trips" element={<MyTrips />} />
+        <Route path="/user/trips" element={<MyTrips />} />
+        <Route path="/user/saved" element={<SavedTrips />} />
+        <Route path="/user/attended" element={<AttendedTrips />} />
       </Route>
       <Route path="/profile" element={<Profile />} />
       <Route path="/auth" element={<Auth />} />
