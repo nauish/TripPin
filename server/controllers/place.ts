@@ -1,26 +1,34 @@
 import { Request, Response } from 'express';
-import { deletePlace, insertPlace, selectPlacesByTripId, updatePlace } from '../models/place.js';
+import {
+  deletePlace,
+  deleteSavedTrip,
+  insertPlace,
+  insertSavedTrip,
+  selectPlacesByTripId,
+  updatePlace,
+  updatePlaceOrder,
+} from '../models/place.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 
 export async function createPlace(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
-    const { name, location, markerType, type, note, tripId, dayNumber, startHour, endHour } =
-      req.body;
+    const { name, location, markerType, type, note, tripId, dayNumber, address } = req.body;
     const { lat, lng } = location;
+
+    console.log(req.body);
 
     const placeId = await insertPlace({
       user_id: userId,
       trip_id: tripId,
-      day_number: dayNumber,
+      day_number: dayNumber ?? 1,
       name,
       latitude: lat,
       longitude: lng,
       marker_type: markerType,
       type,
       note,
-      start_hour: startHour,
-      end_hour: endHour,
+      address,
     });
 
     if (!placeId) {
@@ -107,6 +115,50 @@ export async function deletePlaceFromTrip(req: Request, res: Response) {
     }
 
     return res.json({ data: { message: 'Successfully Deleted' } });
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(400).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function putPlaceOrder(req: Request, res: Response) {
+  try {
+    const array = req.body;
+    await Promise.all(
+      array.map(async (item: { order: number; id: string }) => {
+        const { order, id } = item;
+        await updatePlaceOrder(order, +id);
+      }),
+    );
+    return res.json({ data: { message: 'Successfully Updated' } });
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(400).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function saveTripByOthers(req: Request, res: Response) {
+  try {
+    const { userId } = res.locals;
+    const { isSaved, tripId } = req.body;
+
+    if (isSaved) {
+      const saved = await insertSavedTrip(userId, +tripId);
+      if (!saved) {
+        throw new Error('Save trip failed');
+      }
+      return res.json({ data: { message: '加到收藏成功' } });
+    }
+
+    const isSuccess = await deleteSavedTrip(userId, +tripId);
+    if (!isSuccess) {
+      throw new Error('Delete saved trip failed');
+    }
+    return res.json({ data: { message: '從收藏移除成功' } });
   } catch (err) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
