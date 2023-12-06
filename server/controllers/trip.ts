@@ -3,20 +3,22 @@ import {
   insertAttendee,
   insertTrip,
   selectAttendeesByTripId,
+  selectSavedTripsByUserId,
   selectTripById,
   selectTripsByUserId,
   updateTrip,
 } from '../models/trip.js';
 import { selectChatByTripId } from '../models/chat.js';
 import { insertPlace, selectPlacesByTripId } from '../models/place.js';
-import { selectUserByEmail } from '../models/user.js';
+import { selectTripsAttendedByUser, selectUserByEmail } from '../models/user.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import PRIVACY_SETTING from '../constants/privacySetting.js';
 
 export async function createTrip(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
-    const { name, destination, budget, startDate, endDate, privacySetting, type, note } = req.body;
+    const { name, destination, budget, startDate, endDate, privacySetting, type, note, photo } =
+      req.body;
     if (!name || !privacySetting) throw new ValidationError('Missing required fields');
     const tripId = await insertTrip({
       user_id: userId,
@@ -28,6 +30,7 @@ export async function createTrip(req: Request, res: Response) {
       type,
       privacy_setting: privacySetting ?? PRIVACY_SETTING.PUBLIC,
       note,
+      photo,
     });
     return res.json({ data: { tripId } });
   } catch (err) {
@@ -107,6 +110,23 @@ export async function getTripsCreatedByUser(req: Request, res: Response) {
   }
 }
 
+export async function getTripsSavedByUser(req: Request, res: Response) {
+  try {
+    const { userId } = res.locals;
+    const data = await selectSavedTripsByUserId(+userId);
+
+    return res.status(200).json({ data });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
 export async function getTripChat(req: Request, res: Response) {
   try {
     const { tripId } = req.params;
@@ -168,6 +188,7 @@ export async function copyTrip(req: Request, res: Response) {
       type: oldTrip[0].type,
       privacy_setting: oldTrip[0].privacy_setting,
       note: oldTrip[0].note,
+      photo: oldTrip[0].photo,
     });
     oldTripPlaces.forEach(async (place) => {
       await insertPlace({
@@ -183,12 +204,29 @@ export async function copyTrip(req: Request, res: Response) {
         end_hour: place.end_hour,
         longitude: place.longitude,
         latitude: place.latitude,
+        address: place.address,
       });
     });
     return res.status(200).json({ data: { newTripId } });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function getTripsAttendedByUser(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    const data = await selectTripsAttendedByUser(+userId);
+    return res.status(200).json({ data });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
     }
     return res.status(500).json({ error: 'Something went wrong' });
   }

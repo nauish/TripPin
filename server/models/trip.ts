@@ -22,11 +22,12 @@ export async function insertTrip(trip: {
   type?: string;
   privacy_setting: string;
   note?: string;
+  photo?: string;
 }) {
   const results = await pool.query(
     `
-    INSERT INTO trips (user_id, name, destination, start_date, end_date, budget, type, privacy_setting, note)
-    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+    INSERT INTO trips (user_id, name, destination, start_date, end_date, budget, type, privacy_setting, note, photo)
+    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
   `,
     [
       trip.user_id,
@@ -38,6 +39,7 @@ export async function insertTrip(trip: {
       trip.type,
       trip.privacy_setting,
       trip.note,
+      trip.photo,
     ],
   );
   const tripId = results.rows[0].id;
@@ -74,13 +76,11 @@ export async function insertAttendee(userId: number, tripId: number) {
 export async function selectAttendeesByTripId(tripId: number) {
   const results = await pool.query(
     `
-    SELECT
-          u.id,
-          u.name
-    FROM attendees a
-    LEFT JOIN users u
-    ON a.user_id = u.id
-    WHERE a.trip_id = $1
+    SELECT t.user_id FROM trips t
+    WHERE t.id = $1
+    UNION ALL
+    SELECT a.user_id FROM attendees a
+    WHERE trip_id = $1
     `,
     [tripId],
   );
@@ -90,9 +90,23 @@ export async function selectAttendeesByTripId(tripId: number) {
 export async function selectTripsByUserId(userId: number, isPrivateTrip: boolean) {
   const results = await pool.query(
     isPrivateTrip
-      ? 'SELECT * FROM trips WHERE user_id = $1'
-      : 'SELECT * FROM trips WHERE user_id = $1  AND privacy_setting = $2',
+      ? 'SELECT * FROM trips WHERE user_id = $1 ORDER BY id DESC'
+      : 'SELECT * FROM trips WHERE user_id = $1  AND privacy_setting = $2 ORDER BY id DESC',
     isPrivateTrip ? [userId] : [userId, PRIVACY_SETTING.PUBLIC],
+  );
+  return results.rows;
+}
+
+export async function selectSavedTripsByUserId(userId: number) {
+  const results = await pool.query(
+    `
+    SELECT t.id, t.name, t.destination, t.start_date, t.end_date, t.budget, t.type, t.privacy_setting, t.note, t.photo
+    FROM trips t
+    INNER JOIN saved_trips st
+    ON t.id = st.trip_id
+    WHERE st.user_id = $1
+  `,
+    [userId],
   );
   return results.rows;
 }
