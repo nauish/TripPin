@@ -1,4 +1,11 @@
+import { z } from 'zod';
 import pool from './dbPools.js';
+
+const ChatSchema = z.object({
+  message: z.string(),
+  user_id: z.coerce.number(),
+  name: z.string(),
+});
 
 export async function insertChat(message: string, tripId: number, userId: number) {
   const results = await pool.query(
@@ -24,5 +31,6 @@ export async function selectChatByTripId(tripId: number) {
     [tripId],
   );
 
-  return results.rows;
+  const result = z.array(ChatSchema).parse(results.rows);
+  return result;
 }
