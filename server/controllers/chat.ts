@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { insertChat } from '../models/chat.js';
-import getSocketIOInstance from '../socketServer.js';
+import getSocketIOInstance from './socketio.js';
 
 export async function getChatCompletion(req: Request, res: Response) {
   const client = new OpenAI({
@@ -25,7 +25,7 @@ export async function getChatCompletion(req: Request, res: Response) {
         { role: 'user', content: req.body?.userPrompt || 'Hi' },
       ],
       temperature: 0,
-      max_tokens: 150,
+      max_tokens: 600,
       n: 1,
       stream: true,
     });
