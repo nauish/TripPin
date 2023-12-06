@@ -1,11 +1,33 @@
 import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { IoIosStar } from 'react-icons/io';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+
+const StarRating = ({ rating, onClick }) => {
+  const maxRating = 5;
+
+  return (
+    <div>
+      {[...Array(maxRating)].map((_, index) => (
+        <IoIosStar
+          key={index}
+          onClick={() => onClick(index + 1)} // Ratings start from 1
+          className={`cursor-pointer inline-block ${
+            index < rating ? 'text-yellow-500' : 'text-gray-300'
+          } text-lg`}
+        />
+      ))}
+    </div>
+  );
+};
 
 const Comment = () => {
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState('');
   const user = JSON.parse(localStorage.getItem('user'));
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
   const params = useParams();
 
   const postComment = (comment) => {
@@ -17,6 +39,7 @@ const Comment = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
         body: JSON.stringify(comment),
       },
@@ -29,7 +52,9 @@ const Comment = () => {
 
   const handleChange = (e) => setInput(e.target.value);
 
-  const handleRatingChange = (e) => setRating(e.target.value);
+  const handleRatingChange = (newRating) => {
+    setRating(newRating);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -65,61 +90,44 @@ const Comment = () => {
   };
 
   return (
-    <div className="bg-white shadow-lg rounded-lg p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">評論</h1>
+    <Card className="bg-white p-4 mx-16 my-4">
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">評論</h2>
       <form
         onSubmit={handleSubmit}
         className="flex items-center space-x-2 mt-4"
       >
-        <input
+        <textarea
           type="text"
           value={input}
           onChange={handleChange}
           className="flex-1 border border-gray-300 rounded-lg p-2"
-          placeholder="Write a comment..."
+          placeholder="寫下對這個行程的心得吧！"
         />
-        <select
-          value={rating}
-          onChange={handleRatingChange}
-          className="border border-gray-300 rounded-lg p-2"
-        >
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-        <button
-          type="submit"
-          className="bg-blue-500 text-white rounded-lg px-4 py-2"
-        >
-          Submit
-        </button>
+        <StarRating rating={rating} onClick={handleRatingChange} />
+        <Button type="submit">評論</Button>
       </form>
-      {comments.map((comment, index) => (
-        <div key={index} className="flex items-start space-x-2 mb-2">
-          {comment.photo ? (
-            <img
-              src={comment.photo}
-              alt={comment.username}
-              className="w-10 h-10 rounded-full"
-            />
-          ) : undefined}
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">
-              {comment.username}
-            </p>
-            <p className="text-sm text-gray-700">{comment.comment}</p>
-            <div className="flex items-center space-x-1">
-              {comment.rating}
-              <span className="text-sm text-gray-600">
-                {formatDate(comment.created_at)}
-              </span>
+      {comments &&
+        comments.map((comment, index) => (
+          <div key={index} className="flex items-start space-x-2 my-2">
+            <Avatar>
+              <AvatarImage src={comment.photo} />
+              <AvatarFallback>{comment.username[0]}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-gray-900">
+                {comment.username}
+                <StarRating rating={comment.rating} />
+              </div>
+              <p className="text-sm text-gray-800">{comment.comment}</p>
+              <div className="flex items-center space-x-1">
+                <span className="text-xs text-gray-500">
+                  {formatDate(comment.created_at)}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+    </Card>
   );
 };
 

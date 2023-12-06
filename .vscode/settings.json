@@ -1,3 +1,11 @@
 {
-  "cSpell.words": ["BIGSERIAL", "googlemaps", "linebreak", "pangea", "toastify"]
+  "cSpell.words": [
+    "BIGSERIAL",
+    "googlemaps",
+    "linebreak",
+    "openai",
+    "pangea",
+    "socketio",
+    "toastify"
+  ]
 }
