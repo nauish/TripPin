@@ -100,7 +100,17 @@ export async function selectTripsByUserId(userId: number, isPrivateTrip: boolean
 export async function selectSavedTripsByUserId(userId: number) {
   const results = await pool.query(
     `
-    SELECT t.id, t.name, t.destination, t.start_date, t.end_date, t.budget, t.type, t.privacy_setting, t.note, t.photo
+    SELECT
+          t.id,
+          t.name,
+          t.destination,
+          t.start_date,
+          t.end_date,
+          t.budget,
+          t.type,
+          t.privacy_setting,
+          t.note,
+          t.photo
     FROM trips t
     INNER JOIN saved_trips st
     ON t.id = st.trip_id
