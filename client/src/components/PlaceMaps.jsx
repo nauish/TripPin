@@ -90,7 +90,6 @@ const PlacesMaps = () => {
         const isAttendee = attendees.some((attendee) => {
           return +attendee.user_id === user.id;
         });
-        console.log(isAttendee);
         setIsAttendee(isAttendee);
       })
       .catch((error) => {
@@ -114,6 +113,7 @@ const PlacesMaps = () => {
       })
       .then((json) => {
         setData(json.data);
+        console.log(json.data);
         return json.data;
       })
       .catch((error) => {
@@ -570,13 +570,17 @@ const PlacesMaps = () => {
     return (
       <ul>
         {day.places.map((place, index) => (
-          <PlaceItem
-            key={place.id}
-            place={place}
-            updateData={updateData}
-            centerToTheMarker={centerToTheMarker}
-            index={index}
-          />
+          <div key={place.id}>
+            <div className="flex items-center space-x-2">
+              {place.distance_from_previous}
+            </div>
+            <PlaceItem
+              place={place}
+              updateData={updateData}
+              centerToTheMarker={centerToTheMarker}
+              index={index}
+            />
+          </div>
         ))}
       </ul>
     );
