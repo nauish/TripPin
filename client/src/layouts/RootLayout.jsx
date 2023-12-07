@@ -15,7 +15,7 @@ export default function RootLayout() {
           <Outlet />
         </main>
         <>
-          <ToastContainer />
+          <ToastContainer position="bottom-right" />
         </>
       </div>
     </SocketProvider>
