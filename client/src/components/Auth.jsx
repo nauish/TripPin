@@ -36,18 +36,12 @@ export default function Auth() {
       const SUCCESSFUL_LOGIN_MESSAGE = '帳號密碼登入成功！';
       result.error
         ? toast.error(result.error)
-        : toast(SUCCESSFUL_LOGIN_MESSAGE);
+        : toast.success(SUCCESSFUL_LOGIN_MESSAGE);
 
       if (result.data.access_token) {
         localStorage.setItem('accessToken', result.data.access_token);
         localStorage.setItem('user', JSON.stringify(result.data.user));
-        setTimeout(() => {
-          const intendedPath = localStorage.getItem('intendedPath');
-          if (intendedPath) {
-            localStorage.removeItem('intendedPath');
-            navigate(intendedPath);
-          } else navigate(`/users/${result.data.user.id}/trips`);
-        }, 500);
+        navigate(-1);
       }
     } catch (error) {
       console.error('Error:', error);

@@ -35,8 +35,8 @@ const router = createBrowserRouter(
         <Route path="/user/trips" element={<MyTrips />} />
         <Route path="/user/saved" element={<SavedTrips />} />
         <Route path="/user/attended" element={<AttendedTrips />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
-      <Route path="/profile" element={<Profile />} />
       <Route path="/auth" element={<Auth />} />
       <Route
         path="*"
