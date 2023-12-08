@@ -29,13 +29,9 @@ const useLibraryLoader = (libraryName) => {
 };
 
 function useMapApi() {
-  const mapsLibrary = useLibraryLoader('maps');
-  const placesLibrary = useLibraryLoader('places');
   const markerLibrary = useLibraryLoader('marker');
 
   return {
-    MapsLibrary: mapsLibrary,
-    PlacesLibrary: placesLibrary,
     MarkerLibrary: markerLibrary,
   };
 }
