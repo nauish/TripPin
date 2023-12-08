@@ -22,7 +22,7 @@ jobs:
         run: npm install
       - name: Build client for production
         env:
-          VITE_VITE_BACKEND_HOST: ${{ secrets.VITE_BACKEND_HOST }}
+          VITE_BACKEND_HOST: ${{ secrets.VITE_BACKEND_HOST }}
           VITE_MAPS_API: ${{ secrets.VITE_MAPS_API }}
           VITE_UNSPLASH_ACCESS_KEY: ${{ secrets.VITE_UNSPLASH_ACCESS_KEY }}
         run: npm run build
