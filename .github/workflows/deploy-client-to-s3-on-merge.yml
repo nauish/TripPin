@@ -18,10 +18,14 @@ jobs:
         working-directory: 'client'
     steps:
       - uses: actions/checkout@v4
-      - name: build
-        run: |
-          npm install
-          npm run build
+      - name: Install dependencies
+        run: npm install
+      - name: Build client for production
+        env:
+          VITE_VITE_BACKEND_HOST: ${{ secrets.VITE_BACKEND_HOST }}
+          VITE_MAPS_API: ${{ secrets.VITE_MAPS_API }}
+          VITE_UNSPLASH_ACCESS_KEY: ${{ secrets.VITE_UNSPLASH_ACCESS_KEY }}
+        run: npm run build
 
       - name: Deploy to S3
         uses: reggionick/s3-deploy@v4
@@ -32,5 +36,4 @@ jobs:
           dist-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID  }}
           invalidation: /
           delete-removed: true
-          no-cache: true
           private: true

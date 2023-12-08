@@ -11,7 +11,10 @@ export default function ProtectedRoute() {
 
   useEffect(() => {
     const { accessToken } = localStorage;
-    if (!accessToken) navigate('/auth');
+    if (!accessToken) {
+      navigate('/auth');
+      return;
+    }
 
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/users/profile`, {
       headers: {
@@ -19,11 +22,14 @@ export default function ProtectedRoute() {
       },
     })
       .then((response) => {
-        if (!response.ok) throw new Error('請先登入！');
+        console.log(response);
+        if (!response.ok) {
+          navigate('/auth');
+          return;
+        }
         return response.json();
       })
       .then((json) => {
-        if (json.error) setError(json.error);
         setProfileData(json.data);
       })
       .catch((error) => setError(error))
