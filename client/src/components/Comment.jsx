@@ -28,17 +28,14 @@ const Comment = () => {
   const [input, setInput] = useState('');
   const user = JSON.parse(localStorage.getItem('user'));
   const [rating, setRating] = useState(0);
-  const params = useParams();
+  const { tripId } = useParams();
 
   const postComment = (comment) => {
     fetch(
-      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${
-        params.tripId
-      }/comments`,
+      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/comments`,
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
         body: JSON.stringify(comment),
@@ -60,7 +57,7 @@ const Comment = () => {
     e.preventDefault();
     postComment({
       user_id: user.id,
-      trip_id: params.tripId,
+      trip_id: tripId,
       comment: input,
       rating: rating,
     });
@@ -68,25 +65,19 @@ const Comment = () => {
   };
 
   useEffect(() => {
-    fetch(
-      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${
-        params.tripId
-      }/comments`,
-    )
+    fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/comments`)
       .then((response) => response.json())
       .then((json) => setComments(json.data));
   }, []);
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const options = {
+    return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
       minute: 'numeric',
-    };
-    return date.toLocaleString('en-US', options);
+    });
   };
 
   return (

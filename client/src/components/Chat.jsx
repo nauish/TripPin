@@ -12,36 +12,36 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 
-const ChatWindow = ({ onClose }) => {
+const Chat = () => {
+  const [isChatWindowOpen, setIsChatWindowOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
+  const [error, setError] = useState(null);
   const [answer, setAnswer] = useState('');
   const socket = useSocket();
-  const params = useParams();
+  const { tripId } = useParams();
   const user = JSON.parse(localStorage.getItem('user')) || {};
   const ref = useRef(null);
 
   useEffect(() => {
-    // fetch message history
-    fetch(
-      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${params.tripId}/chat`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
+    fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/chat`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
       },
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        setMessages(data.data);
+    })
+      .then((response) => {
+        if (!response.ok) throw response.statusText;
+        return response.json();
       })
+      .then((data) => setMessages(data?.data))
       .catch((err) => {
         console.error(err);
+        setError(err);
       });
 
-    socket.emit('newUserInRoom', { name: user.name, room: params.tripId });
+    socket.emit('newUserInRoom', { name: user.name, room: tripId });
     socket.on('newChatMessage', (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
     });
@@ -55,9 +55,7 @@ const ChatWindow = ({ onClose }) => {
     try {
       const userPrompt = messageInput.replace('/ai', '');
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${
-          params.tripId
-        }/chat`,
+        `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/chat`,
         {
           method: 'POST',
           headers: {
@@ -93,7 +91,7 @@ const ChatWindow = ({ onClose }) => {
     const newChatMessage = {
       user_id: user.id,
       name: user.name,
-      room: params.tripId,
+      room: tripId,
       message: trimmedMessage,
     };
 
@@ -117,91 +115,87 @@ const ChatWindow = ({ onClose }) => {
     }
   };
 
-  return (
-    messages && (
-      <Card className="fixed bottom-5 right-14 z-10 max-w-sm rounded-xl">
-        <div className="text-white bg-white flex justify-end items-center pr-4 rounded-t-md py-2 text-lg">
-          <IoMdCloseCircleOutline
-            onClick={onClose}
-            className="cursor-pointer text-black"
-          />
-        </div>
-        <div className="pb-2 px-2">
-          <ScrollArea className="h-72">
-            {messages.map((message, index) => (
-              <div key={index} className="flex py-2 pl-2 pr-4">
-                <Avatar
-                  className={`mr-1 ${
-                    +message.user_id === user.id ? 'ml-auto hidden' : ''
-                  }`}
-                >
-                  <AvatarImage src={message.photo} />
-                  <AvatarFallback>{message.name[0]}</AvatarFallback>
-                </Avatar>
-                <div
-                  className={`flex flex-col gap-2 rounded-lg px-3 py-2 text-sm ${
-                    message.user_id === user.id
-                      ? 'ml-auto text-white bg-gray-800'
-                      : 'bg-muted'
-                  }`}
-                >
-                  {message.message}
-                </div>
-                <div ref={ref}></div>
-              </div>
-            ))}
-          </ScrollArea>
-          {answer && (
-            <div className="flex py-2 pl-2 pr-4">
-              <Avatar className="mr-1">
-                <AvatarFallback>A</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col gap-2 rounded-lg px-3 py-2 text-sm bg-muted">
-                {answer}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center">
-            <Input
-              type="text"
-              value={messageInput}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="輸入訊息"
-              className="flex-grow mr-2"
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={messageInput.trim('') === ''}
-            >
-              <IoMdSend />
-            </Button>
-          </div>
-        </div>
-      </Card>
-    )
-  );
-};
-
-const Chat = () => {
-  const [isChatWindowOpen, setIsChatWindowOpen] = useState(false);
-
   const handleChatButtonClick = () => {
     setIsChatWindowOpen(!isChatWindowOpen);
   };
 
   return (
     <>
-      {!isChatWindowOpen && (
+      {!error && !isChatWindowOpen && (
         <div
           onClick={handleChatButtonClick}
-          className="fixed flex justify-center items-center bottom-5 right-14 z-10 max-w-md px-4 bg-white h-14 w-14 rounded-full cursor-pointer"
+          className="border-gray-300 border-2 fixed flex justify-center items-center 
+                        bottom-5 right-14 z-10 max-w-md px-4 bg-white 
+                        h-14 w-14 rounded-full cursor-pointer"
         >
-          <IoIosChatboxes className=" text-3xl" />
+          <IoIosChatboxes className="text-3xl" />
         </div>
       )}
-      {isChatWindowOpen && <ChatWindow onClose={handleChatButtonClick} />}
+
+      {isChatWindowOpen && (
+        <Card className="fixed bottom-5 right-14 z-10 max-w-sm rounded-xl">
+          <div className="text-white bg-white flex justify-end items-center pr-4 rounded-t-md py-2 text-lg">
+            <IoMdCloseCircleOutline
+              onClick={handleChatButtonClick}
+              className="cursor-pointer text-black"
+            />
+          </div>
+          <div className="pb-2 px-2">
+            <ScrollArea className="h-72">
+              {messages &&
+                messages.map((message, index) => (
+                  <div key={index} className="flex py-2 pl-2 pr-4">
+                    <Avatar
+                      className={`mr-1 ${
+                        +message.user_id === user.id ? 'ml-auto hidden' : ''
+                      }`}
+                    >
+                      <AvatarImage src={message.photo} />
+                      <AvatarFallback>{message.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div
+                      className={`flex flex-col gap-2 rounded-lg px-3 py-2 text-sm ${
+                        message.user_id === user.id
+                          ? 'ml-auto text-white bg-gray-800'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      {message.message}
+                    </div>
+                    <div ref={ref}></div>
+                  </div>
+                ))}
+            </ScrollArea>
+            {answer && (
+              <div className="flex py-2 pl-2 pr-4">
+                <Avatar className="mr-1">
+                  <AvatarFallback>A</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col gap-2 rounded-lg px-3 py-2 text-sm bg-muted">
+                  {answer}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center">
+              <Input
+                type="text"
+                value={messageInput}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="輸入訊息"
+                className="flex-grow mr-2"
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={messageInput.trim() === ''}
+              >
+                <IoMdSend />
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
     </>
   );
 };

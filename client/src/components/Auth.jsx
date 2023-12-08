@@ -2,18 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
-export default function Auth() {
+const Auth = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [currentForm, setCurrentForm] = useState('register');
-
   const navigate = useNavigate();
 
-  const PROVIDER = 'native';
-
-  const handleFormSubmit = async (event, endpoint) => {
-    event.preventDefault();
+  const handleFormSubmit = async (e, endpoint) => {
+    e.preventDefault();
 
     try {
       const response = await fetch(
@@ -26,25 +23,25 @@ export default function Auth() {
           body: JSON.stringify({
             name,
             email,
-            provider: PROVIDER,
+            provider: 'native',
             password,
           }),
         },
       );
 
-      const result = await response.json();
-      const SUCCESSFUL_LOGIN_MESSAGE = '帳號密碼登入成功！';
-      result.error
-        ? toast.error(result.error)
-        : toast.success(SUCCESSFUL_LOGIN_MESSAGE);
+      const json = await response.json();
+      json.error
+        ? toast.error(json.error)
+        : toast.success('帳號密碼登入成功！');
 
-      if (result.data.access_token) {
-        localStorage.setItem('accessToken', result.data.access_token);
-        localStorage.setItem('user', JSON.stringify(result.data.user));
+      const { data } = json;
+      if (data.access_token) {
+        localStorage.setItem('accessToken', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         navigate(-1);
       }
     } catch (error) {
-      console.error('Error:', error);
+      toast.error('錯誤：', error);
     }
   };
 
@@ -184,4 +181,6 @@ export default function Auth() {
       </div>
     </>
   );
-}
+};
+
+export default Auth;
