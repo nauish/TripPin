@@ -46,21 +46,20 @@ export async function createPlace(req: Request, res: Response) {
 
 export async function getTripPlaces(req: Request, res: Response) {
   try {
-    const { tripId } = req.params;
-    const places = await selectPlacesByTripId(+tripId);
+    const places = await selectPlacesByTripId(+req.params.tripId);
 
-    const maxDayNumber = places[0] ? places[0].max_day_number : 0;
+    const maxDayNumber = Math.max(...places.map((place) => place.day_number));
     const allDays = Array.from({ length: maxDayNumber }, (_, index) => index + 1);
 
-    const tripDays = allDays.map((dayNumber) => {
+    const data = allDays.map((dayNumber) => {
       const dayPlaces = places.filter((place) => place.day_number === dayNumber);
       return {
         dayNumber,
-        places: dayPlaces.map((place) => ({ ...place })),
+        places: dayPlaces,
       };
     });
 
-    return res.json({ data: tripDays });
+    return res.json({ data });
   } catch (error) {
     if (error instanceof ValidationError) return res.status(401).json({ error: error.message });
     console.error(error);
@@ -110,9 +109,7 @@ export async function deletePlaceFromTrip(req: Request, res: Response) {
     const { placeId } = req.params;
     const result = await deletePlace(+placeId);
 
-    if (!result) {
-      throw new Error('Delete place failed');
-    }
+    if (!result) throw new Error('Delete place failed');
 
     return res.json({ data: { message: 'Successfully Deleted' } });
   } catch (err) {
@@ -126,12 +123,7 @@ export async function deletePlaceFromTrip(req: Request, res: Response) {
 export async function putPlaceOrder(req: Request, res: Response) {
   try {
     const array = req.body;
-    await Promise.all(
-      array.map(async (item: { order: number; id: string }) => {
-        const { order, id } = item;
-        await updatePlaceOrder(order, +id);
-      }),
-    );
+    await updatePlaceOrder(array);
     return res.json({ data: { message: 'Successfully Updated' } });
   } catch (err) {
     if (err instanceof Error) {
