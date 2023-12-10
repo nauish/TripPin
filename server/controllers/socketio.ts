@@ -1,7 +1,9 @@
 import { Socket, Server } from 'socket.io';
 import { insertChat } from '../models/chat.js';
+import { getCacheInstance } from '../models/cache.js';
 
 let io: Server;
+const cache = await getCacheInstance();
 
 function socketEvents(socket: Socket) {
   socket.on('newUserInRoom', (payload) => {
@@ -30,14 +32,24 @@ function socketEvents(socket: Socket) {
     socket.to(payload.room).emit('addNewPlaceToTrip', payload);
   });
 
-  socket.on('newEditLock', (payload) => {
-    console.log('newEditLock', payload);
-    socket.to(payload.room).emit('newEditLock', payload);
+  socket.on('newEditLock', async (payload) => {
+    const { room, placeId } = payload;
+    const lockKey = `editLock:${room}:${placeId}`;
+    const LOCK_EXPIRE_TIME = 60;
+
+    await cache.set(lockKey, '1', 'EX', LOCK_EXPIRE_TIME);
+    const lockKeys = (await cache.keys(`editLock:${room}:*`)) ?? [];
+    const locks = lockKeys.map((key) => key.split(':')[2]);
+
+    socket.to(room).emit('editLocks', { locks });
   });
 
-  socket.on('newEditUnlock', (payload) => {
-    console.log('newEditUnLock', payload);
-    socket.to(payload.room).emit('newEditUnlock', payload);
+  socket.on('newEditUnlock', async (payload) => {
+    const { room, placeId } = payload;
+    const lockKey = `editLock:${room}:${placeId}`;
+    await cache.del(lockKey);
+    const locks = ((await cache.keys(`editLock:${room}:*`)) ?? []).map((key) => key.split(':')[2]);
+    socket.to(room).emit('editLocks', { locks });
   });
 }
 
