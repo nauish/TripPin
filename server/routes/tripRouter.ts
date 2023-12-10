@@ -28,6 +28,7 @@ import {
   putChecklistItem,
 } from '../controllers/checklist.js';
 import { checkTripAttendees, checkTripAttendeesOptional } from '../middleware/attendees.js';
+import generatePDF from '../controllers/pdf.js';
 
 const router = Router();
 
@@ -36,6 +37,9 @@ router
   .route('/v1/trips/:tripId')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTrip])
   .put([authenticateJWT, checkTripAttendees, putTrip]);
+router
+  .route('/v1/trips/:tripId/pdf')
+  .get([authenticateJWTOptional, checkTripAttendeesOptional, generatePDF]);
 router
   .route('/v1/trips/:tripId/attendees/')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTripAttendees])

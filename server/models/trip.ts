@@ -1,6 +1,7 @@
 // import { z } from 'zod';
 import PRIVACY_SETTING from '../constants/privacySetting.js';
 import pool from './dbPools.js';
+import { Trip } from '../types/trip.js';
 
 /**
   CREATE TABLE attendees (
@@ -57,6 +58,69 @@ export async function selectTripById(id: number) {
   );
 
   return results.rows;
+}
+
+export async function selectCompleteTripInfo(id: number) {
+  const results = await pool.query(
+    `
+    WITH PlaceDistances AS (
+      SELECT
+        *,
+        ST_X(location::geometry) AS longitude,
+        ST_Y(location::geometry) AS latitude,
+        ST_Distance(
+          LAG(p.location::geometry) OVER (PARTITION BY p.trip_id ORDER BY p.dnd_order), 
+          p.location::geometry
+        ) AS distance_from_previous
+      FROM places p
+      WHERE p.trip_id = $1
+    )
+    SELECT
+      json_build_object(
+        'id', t.id,
+        'name', t.name,
+        'destination', t.destination,
+        'start_date', t.start_date,
+        'end_date', t.end_date,
+        'budget', t.budget,
+        'type', t.type,
+        'privacy_setting', t.privacy_setting,
+        'note', t.note,
+        'photo', t.photo,
+        'user', jsonb_build_object(
+          'name', u.name
+        ),
+        'places', json_agg(
+          DISTINCT jsonb_build_object(
+            'id', pd.id,
+            'name', pd.name,
+            'day_number', pd.day_number,
+            'tag', pd.tag,
+            'type', pd.type,
+            'note', pd.note,
+            'dnd_order', pd.dnd_order,
+            'marker_type', pd.marker_type,
+            'start_hour', pd.start_hour,
+            'end_hour', pd.end_hour,
+            'longitude', pd.longitude,
+            'latitude', pd.latitude,
+            'address', pd.address,
+            'distance_from_previous', pd.distance_from_previous
+          )
+        )
+      )
+    FROM PlaceDistances pd
+    JOIN trips t ON pd.trip_id = t.id
+    JOIN users u ON t.user_id = u.id
+    JOIN attendees a ON t.id = a.trip_id
+    GROUP BY t.id, u.id;
+  `,
+    [id],
+  );
+
+  const [trip] = results.rows;
+
+  return trip.json_build_object as Trip;
 }
 
 export async function insertAttendee(userId: number, tripId: number) {
