@@ -8,22 +8,26 @@ import authRouter from './routes/authRouter.js';
 import tripRouter from './routes/tripRouter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { initSocketIO } from './controllers/socketio.js';
+import rateLimiter from './middleware/rateLimiter.js';
 
 dotenv.config();
-
 const app = express();
 const server = http.createServer(app);
 initSocketIO(server, {
   cors: {
-    origin: '*',
+    origin: process.env.CLIENT_URL,
   },
 });
 
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+  }),
+);
 app.use(cookieParser());
 app.use(express.json());
 
-app.use('/api', [userRouter, tripRouter, authRouter]);
+app.use('/api', rateLimiter, [userRouter, tripRouter, authRouter]);
 
 app.use(express.static('public'));
 
