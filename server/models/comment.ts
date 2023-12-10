@@ -23,7 +23,7 @@ export async function selectCommentsByTripId(tripId: number) {
           tc.rating,
           tc.created_at
     FROM trip_comments tc
-    LEFT JOIN users u ON tc.user_id = u.id
+    INNER JOIN users u ON tc.user_id = u.id
     WHERE trip_id = $1
     `,
     [tripId],

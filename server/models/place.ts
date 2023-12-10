@@ -69,20 +69,21 @@ export async function insertPlace(place: {
 }
 
 export async function selectPlacesByTripId(TripId: number) {
-  const combinedQuery = `
-    SELECT 
-      p.*,
-      t.privacy_setting,
-      t.user_id AS trip_owner_id,
-      ST_X(location::geometry) AS longitude,
-      ST_Y(location::geometry) AS latitude,
-      (SELECT max(day_number) FROM places WHERE trip_id = $1) AS max_day_number
-    FROM places p 
-    LEFT JOIN trips t ON p.trip_id = t.id
-    WHERE p.trip_id = $1
-    ORDER BY p.dnd_order ASC
-  `;
-  const results = await pool.query(combinedQuery, [TripId]);
+  const results = await pool.query(
+    `
+      SELECT
+        p.*,
+        ST_X(location::geometry) AS longitude,
+        ST_Y(location::geometry) AS latitude,
+        ST_Distance(
+          LAG(p.location::geometry) OVER (PARTITION BY p.trip_id ORDER BY p.dnd_order), 
+          p.location::geometry
+        ) AS distance_from_previous
+      FROM places p
+      WHERE p.trip_id = $1
+    `,
+    [TripId],
+  );
 
   return results.rows;
 }
@@ -126,18 +127,23 @@ export async function deletePlace(placeId: number) {
   return true;
 }
 
-export async function updatePlaceOrder(order: number, placeId: number) {
+export async function updatePlaceOrder(array: { order: number; id: number }[]) {
+  const orders = array.map((v) => v.order);
+  const ids = array.map((v) => Number(v.id));
+
   const results = await pool.query(
     `
-    UPDATE places
-    SET dnd_order = $1
-    WHERE id = $2
-    RETURNING id
+    UPDATE places p
+    SET dnd_order = new."order"
+    FROM (
+      SELECT * FROM UNNEST($1::int[], $2::int[]) AS new ("order", "id")
+    ) AS new
+    WHERE p.id = new.id
   `,
-    [order, placeId],
+    [orders, ids],
   );
-  const result = results.rows[0];
-  if (result) return result;
+
+  if (results) return results.rowCount;
   throw new Error('Update place order failed');
 }
 

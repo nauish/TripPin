@@ -24,7 +24,7 @@ export async function selectChatByTripId(tripId: number) {
     `
     SELECT u.id as user_id, u.name, message 
     FROM chat_messages cm
-    JOIN users u ON cm.user_id = u.id
+    INNER JOIN users u ON cm.user_id = u.id
     WHERE trip_id = $1
     ORDER BY cm.id ASC
     `,

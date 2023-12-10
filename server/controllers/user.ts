@@ -3,6 +3,7 @@ import { hash, verify } from 'argon2';
 import jwt from 'jsonwebtoken';
 import * as userModel from '../models/user.js';
 import PROVIDER from '../constants/provider.js';
+import { ValidationError } from '../middleware/errorHandler.js';
 
 const cookieOptions = {
   httpOnly: true,
@@ -35,7 +36,7 @@ function createToken(userId: number, seconds: number) {
 
 export async function createUser(req: Request, res: Response) {
   try {
-    const expiredIn = process.env.EXPIRE_IN_SECONDS ? +process.env.EXPIRE_IN_SECONDS : 3600;
+    const expiredIn = Number(process.env.EXPIRE_IN_SECONDS) || 3600;
     const { name, email, password } = req.body;
     const hashedPassword = await hash(password);
     const userId = await userModel.insertUser(email, name, PROVIDER.NATIVE, hashedPassword);
@@ -57,12 +58,14 @@ export async function createUser(req: Request, res: Response) {
         },
       });
   } catch (err) {
-    if (err instanceof Error) {
-      if (err.message.includes('duplicate key')) {
-        return res.status(400).json({ error: '信箱已經被註冊過' });
-      }
-      return res.status(400).json({ error: err.message });
+    if (err instanceof Error && err.message.includes('duplicate key')) {
+      return res.status(400).json({ error: '信箱已經被註冊過' });
     }
+
+    if (err instanceof Error) {
+      return res.status(500).json({ error: err.message });
+    }
+
     return res.status(500).json({ error: '註冊失敗' });
   }
 }
@@ -73,11 +76,11 @@ export async function loginUser(req: Request, res: Response) {
     const { email, password, provider } = req.body;
     const user = await userModel.selectUserByEmail(email);
 
-    if (!user) throw new Error('使用者帳號或密碼錯誤');
+    if (!user) throw new ValidationError('使用者帳號或密碼錯誤');
 
     if (provider === PROVIDER.NATIVE) {
       const isValidPassword = await verify(user.token, password);
-      if (!isValidPassword) throw new Error('使用者帳號或密碼錯誤');
+      if (!isValidPassword) throw new ValidationError('使用者帳號或密碼錯誤');
     }
 
     const token = await createToken(user.id, expiredIn);
@@ -98,7 +101,12 @@ export async function loginUser(req: Request, res: Response) {
         },
       });
   } catch (err) {
-    if (err instanceof Error) return res.status(400).json({ error: err.message });
+    if (err instanceof ValidationError) {
+      return res.status(400).json({ error: err.message });
+    }
+    if (err instanceof Error) {
+      return res.status(500).json({ error: err.message });
+    }
     return res.status(500).json({ error: '登入失敗' });
   }
 }
