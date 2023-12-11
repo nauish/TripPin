@@ -3,8 +3,7 @@ import { useSocket } from '../context/SocketContext';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { MdPeopleAlt } from 'react-icons/md';
-import { FaHeart } from 'react-icons/fa';
+import { FaDirections } from 'react-icons/fa';
 import { FaRegCalendarDays } from 'react-icons/fa6';
 import { formatDate, formatBudget } from '@/lib/utils';
 import {
@@ -19,6 +18,18 @@ import { Button } from './ui/button';
 import useMapApi from '@/hooks/useMapApi';
 import Comment from './Comment';
 import { Card, CardTitle } from './ui/card';
+import AddAttendees from './AddAttendees';
+import { BsPersonWalking } from 'react-icons/bs';
+import { FaCarAlt } from 'react-icons/fa';
+import DownloadPDF from './DownloadPDF';
+import Split from 'react-split';
+import SaveTrip from './SaveTrip';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 const reorder = (list, startIndex, end) => {
   const result = Array.from(list);
@@ -38,17 +49,16 @@ const PlacesMaps = () => {
   const [map, setMap] = useState(null);
   const [service, setService] = useState(null);
   const [autocomplete, setAutocomplete] = useState(null);
-  const [isSaved, setIsSaved] = useState(false);
+  const [attendees, setAttendees] = useState([]);
   const [clickLocation, setClickLocation] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
   const [nearbyResults, setNearbyResults] = useState([]);
-  const [attendeeEmail, setAttendeeEmail] = useState([]);
   const [lockedPlaces, setLockedPlaces] = useState([]);
   const { tripId } = useParams();
   const socket = useSocket();
   const navigate = useNavigate();
   const autocompleteRef = useRef(null);
-  const [isAttendee, setIsAttendee] = useState(false);
+  const [attendeeRole, SetAttendeeRole] = useState(null);
   const TRIP_API_URL = `${
     import.meta.env.VITE_BACKEND_HOST
   }api/v1/trips/${tripId}`;
@@ -69,7 +79,10 @@ const PlacesMaps = () => {
         }
         return response.json();
       })
-      .then((json) => setTrip(json.data[0]))
+      .then((json) => {
+        console.log(json);
+        setTrip(json.data[0]);
+      })
       .catch((error) => {
         console.log(error);
       });
@@ -84,14 +97,22 @@ const PlacesMaps = () => {
       .then((response) => response.json())
       .then((json) => {
         const { attendees } = json;
-        const isAttendee = attendees.some((attendee) => {
-          return +attendee.user_id === user.id;
-        });
-        setIsAttendee(isAttendee);
+        setAttendees(attendees);
+        const attendee = attendees.find((attendee) => +attendee.id === user.id);
+        SetAttendeeRole(attendee?.role);
       })
       .catch((error) => {
         console.log(error);
       });
+    if (user) {
+      socket.emit('newUserInRoom', { name: user.name, room: tripId });
+      socket.on('editLocks', (payload) => {
+        setLockedPlaces(payload.locks);
+      });
+    }
+    return () => {
+      socket.off('editLocks');
+    };
   }, []);
 
   const fetchPlaces = () => {
@@ -109,6 +130,7 @@ const PlacesMaps = () => {
       })
       .then((json) => {
         setData(json.data);
+        console.log(json.data);
         return json.data;
       })
       .catch((error) => {
@@ -160,16 +182,8 @@ const PlacesMaps = () => {
       setService(service);
       setAutocomplete(autocomplete);
 
-      // Socket.io
-      if (user) socket.emit('newUserInRoom', { name: user.name, room: tripId });
       socket.on('addNewPlaceToTrip', () => {
         fetchPlaces();
-      });
-      socket.on('newEditLock', (payload) => {
-        setLockedPlaces((prev) => [...prev, payload.placeId]);
-      });
-      socket.on('newEditUnlock', (payload) => {
-        setLockedPlaces((prev) => prev.filter((id) => id !== payload.placeId));
       });
       socket.on('getMarker', (data) => {
         toast('有人送來地點');
@@ -184,12 +198,7 @@ const PlacesMaps = () => {
     initMap();
 
     return () => {
-      socket.off('addNewPlaceToTrip');
-      socket.off('newEditLock');
       socket.off('getMarker');
-      socket.off('joinRoom');
-      socket.off('newUserInRoom');
-      socket.off('newEditUnlock');
     };
   }, [Marker]);
 
@@ -225,51 +234,6 @@ const PlacesMaps = () => {
     });
   };
 
-  const savedTrip = () => {
-    fetch(
-      `${import.meta.env.VITE_BACKEND_HOST}api/v1/users/${user.id}/trips/saved`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization,
-        },
-        body: JSON.stringify({ tripId, isSaved: !isSaved }),
-      },
-    )
-      .then((response) => response.json())
-      .then((json) => {
-        if (json.error) {
-          toast.error(json.error);
-          return;
-        }
-        toast(json.data.message);
-        setIsSaved(!isSaved);
-      });
-  };
-
-  const handleAttendeeSubmit = (event) => {
-    event.preventDefault();
-    fetch(`${TRIP_API_URL}/attendees`, {
-      method: 'POST',
-      headers: {
-        Authorization,
-      },
-      body: JSON.stringify({ email: attendeeEmail }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.data) {
-          toast(data.data.message);
-          setAttendeeEmail('');
-        } else {
-          toast('User addition failed: ' + data.error);
-        }
-      })
-      .catch((error) => {
-        toast('Network error: ' + error);
-      });
-  };
-
   const setCenter = (latLng) => {
     map.setCenter(latLng);
   };
@@ -299,7 +263,7 @@ const PlacesMaps = () => {
       map: map,
       position: { lat: latitude, lng: longitude },
     });
-    map.setCenter({ lat: latitude, lng: longitude });
+    map.panTo({ lat: latitude, lng: longitude });
     map.setZoom(15);
   };
 
@@ -307,6 +271,7 @@ const PlacesMaps = () => {
     const response = await fetch(`${TRIP_API_URL}/places`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         Authorization,
       },
       body: JSON.stringify({
@@ -324,7 +289,6 @@ const PlacesMaps = () => {
     if (response.status === 200) {
       toast('已新增景點');
       socket.emit('addNewPlaceToTrip', { room: tripId });
-      fetchPlaces();
     }
 
     const json = await response.json();
@@ -344,6 +308,7 @@ const PlacesMaps = () => {
     const response = await fetch(`${TRIP_API_URL}/places/${placeId}`, {
       method: 'DELETE',
       headers: {
+        'Content-Type': 'application/json',
         Authorization,
       },
     });
@@ -351,13 +316,8 @@ const PlacesMaps = () => {
     if (response.status === 200) {
       socket.emit('addNewPlaceToTrip', { room: tripId });
       toast('景點已刪除');
-      fetchPlaces();
     }
   };
-
-  function handleChange(event) {
-    setAttendeeEmail(event.target.value);
-  }
 
   const onDragEnd = (result) => {
     const { destination, source, type } = result;
@@ -369,7 +329,7 @@ const PlacesMaps = () => {
     if (
       (source.droppableId === destination.droppableId &&
         destination.index === source.index) ||
-      !isAttendee
+      !attendeeRole === 'attendee'
     )
       return;
 
@@ -468,7 +428,6 @@ const PlacesMaps = () => {
           return;
         }
         socket.emit('addNewPlaceToTrip', { room: tripId });
-        console.log(json);
       });
   };
 
@@ -477,6 +436,7 @@ const PlacesMaps = () => {
       const response = await fetch(`${TRIP_API_URL}/places`, {
         method: 'PUT',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
@@ -504,8 +464,6 @@ const PlacesMaps = () => {
 
       if (response.status === 200) {
         socket.emit('addNewPlaceToTrip', { room: tripId });
-        console.log(data);
-        toast('景點更新成功');
         return true;
       } else {
         const json = await response.json();
@@ -521,9 +479,6 @@ const PlacesMaps = () => {
       <ul>
         {day.places.map((place, index) => (
           <div key={place.id}>
-            <div className="flex items-center space-x-2">
-              {place.distance_from_previous}
-            </div>
             <PlaceItem
               place={place}
               updateData={updateData}
@@ -548,28 +503,85 @@ const PlacesMaps = () => {
       console.log(formData);
     };
 
+    const formatDistance = (distance) => {
+      const distanceInM = distance * 100000;
+      if (distanceInM === 0) return;
+      if (distanceInM < 1000) return `${distanceInM.toFixed(0)} 公尺`;
+      return `${(distanceInM / 1000).toFixed(2)} 公里`;
+    };
+
+    const calculateSuggestTransportation = (distance) => {
+      const distanceInM = distance * 100000;
+      if (distanceInM === 0) return;
+      const walkingTime = (distanceInM / 80).toFixed(0);
+      const drivingTime = (distanceInM / 400).toFixed(0);
+      if (distanceInM < 1000)
+        return (
+          <>
+            <BsPersonWalking />
+            {walkingTime}分鐘
+          </>
+        );
+      return (
+        <>
+          <FaCarAlt />
+          {drivingTime}分鐘
+        </>
+      );
+    };
+
+    const formatTime = (time) => {
+      return new Date('1970-01-01T' + time + 'Z').toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    };
+
     return (
       <Draggable key={place.id} draggableId={place.id} index={index}>
         {(provided) => (
           <li
-            className={` ${
-              lockedPlaces.includes(place.id) ? 'bg-red-200' : ''
-            } bg-gray-50 border border-gray-200 shadow-md 
-            rounded-lg p-2 mb-2 
-            cursor-move hover:bg-slate-100`}
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
           >
-            <div>
-              <h3 className="text-lg font-medium">{place.name}</h3>
-              <p className="text-gray-600 mb-1">{place.address}</p>
+            {formatDistance(place.distance_from_previous) && (
+              <div className="flex justify-center">
+                <span className="text-sm text-gray-600 flex items-center">
+                  {calculateSuggestTransportation(place.distance_from_previous)}
+                  {' - '}
+                  {formatDistance(place.distance_from_previous)}
+                  <a
+                    href={`https://www.google.com/maps/dir/${place.name}/${place.previous_place_name}/@${place.latitude},${place.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-500 hover:text-blue-700"
+                  >
+                    <FaDirections />
+                  </a>
+                </span>
+              </div>
+            )}
+            <div
+              className={` ${
+                lockedPlaces.includes(place.id) ? 'bg-red-200' : ''
+              } bg-gray-100 
+            rounded-lg p-4 mb-2 
+            cursor-move hover:bg-slate-100`}
+            >
+              <span className="text-sm text-gray-700">
+                {place.start_hour && formatTime(place.start_hour)}
+                {place.start_hour && place.end_hour && ' - '}
+                {place.end_hour && formatTime(place.end_hour)}
+              </span>
+              <h3 className="text-md font-semibold">{place.name}</h3>
+              <p className="text-gray-600 text-[15px] mb-1">{place.address}</p>
               {lockedPlaces.includes(place.id) && (
                 <p className="text-red-500">此景點正在被編輯</p>
               )}
             </div>
 
-            {isAttendee && (
+            {attendeeRole === 'attendee' && (
               <div>
                 <a
                   className="z-10 cursor-pointer mr-2"
@@ -590,10 +602,6 @@ const PlacesMaps = () => {
                       <div
                         className="text-blue-500 hover:text-blue-700 mr-2"
                         onClick={() => {
-                          if (lockedPlaces.includes(place.id)) {
-                            toast('此景點正在被編輯');
-                            return;
-                          }
                           socket.emit('newEditLock', {
                             room: tripId,
                             name: user.name,
@@ -696,316 +704,331 @@ const PlacesMaps = () => {
   };
 
   const boards = data.map((day) => (
-    <div key={day.dayNumber} className="bg-white border-gray-300 px-16">
-      <h1 className="text-xl mb-2">Day {day.dayNumber}</h1>
-      <Droppable droppableId={day.dayNumber.toString()} type="card">
-        {(provided) => (
-          <ul
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className="min-h-[120px]"
-          >
-            <DayPlaces day={day} />
-            {provided.placeholder}
-          </ul>
-        )}
-      </Droppable>
-    </div>
+    <Accordion
+      type="single"
+      collapsible
+      key={day.dayNumber}
+      className="bg-white border-gray-300 px-16"
+    >
+      <AccordionItem value={`item-${day.dayNumber}`}>
+        <AccordionTrigger>
+          <h2 className="text-xl font-bold mb-2">第 {day.dayNumber} 天</h2>
+          <span className="text-gray-600 ml-auto">
+            {day.places.length} 個地點
+          </span>
+        </AccordionTrigger>
+        <AccordionContent>
+          <Droppable droppableId={day.dayNumber.toString()} type="card">
+            {(provided) => (
+              <ul
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="min-h-[120px]"
+              >
+                <DayPlaces day={day} />
+                {provided.placeholder}
+              </ul>
+            )}
+          </Droppable>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   ));
 
   return (
-    <div className="flex">
-      <div className="flex-1 overflow-y-auto h-[94vh]">
-        <Button
-          onClick={() => {
-            addMarker();
-          }}
-          className="mark-on-map absolute bg-white text-black hover:bg-gray-300 z-10 top-[75px] right-16 py-2 px-4"
-        >
-          將標記傳給同伴
-        </Button>
+    <Split
+      className="split"
+      gutterSize={5}
+      minSize={[450]}
+      sizes={[30, 70]}
+      expandToMin={true}
+    >
+      <div className="overflow-auto h-[94vh]">
+        <div className="flex flex-col">
+          <Button
+            onClick={() => {
+              addMarker();
+            }}
+            className="mark-on-map absolute bg-white text-black hover:bg-gray-300 z-10 top-[75px] right-16 py-2 px-4"
+          >
+            將標記傳給同伴
+          </Button>
 
-        <Button
-          onClick={copyTrip}
-          className="absolute bg-white text-black hover:bg-gray-300 z-10 top-[75px] right-[200px] py-2 px-4"
-        >
-          複製行程
-        </Button>
+          <Button
+            onClick={copyTrip}
+            className="absolute bg-white text-black hover:bg-gray-300 z-10 top-[75px] right-[200px] py-2 px-4"
+          >
+            複製行程
+          </Button>
 
-        {trip && (
-          <div className="flex flex-col items-center">
-            <img
-              src={trip.photo}
-              className="object-cover w-full h-[300px]"
-            ></img>
-            <Card className="bg-white border-none shadow-xl p-4 w-4/5 -mt-32">
-              <CardTitle className="text-3xl">{trip.name}</CardTitle>
-              <p className="text-gray-600 mb-4 italic">{trip.destination}</p>
-              <div className="text-gray-600 mb-4 flex justify-between">
-                <div className="flex items-center gap-1">
-                  <FaRegCalendarDays />
-                  <span className="font-semibold text-sm">
-                    {formatDate(trip.start_date)}
-                  </span>{' '}
-                  ~{' '}
-                  <span className="font-semibold text-sm">
-                    {formatDate(trip.end_date)}
-                  </span>
-                </div>
-                <div className="flex py-2 gap-4">
-                  <div
-                    onClick={savedTrip}
-                    className={
-                      isSaved
-                        ? 'text-red-500 hover:text-red-700 cursor-pointer'
-                        : 'text-gray-500 hover:text-red-700 cursor-pointer'
-                    }
-                  >
-                    <FaHeart />
+          {trip && (
+            <div className="flex flex-col">
+              <img
+                src={trip.photo}
+                className="object-cover w-full h-[300px]"
+              ></img>
+              <Card className="bg-white border-none shadow-xl p-4 mx-16 -mt-32">
+                <CardTitle className="text-3xl">{trip.name}</CardTitle>
+                <p className="text-gray-600 mb-4 italic">{trip.destination}</p>
+                <div className="text-gray-600 mb-4 flex justify-between">
+                  <div className="flex items-center gap-1">
+                    <FaRegCalendarDays />
+                    <span className="font-semibold text-sm">
+                      {formatDate(trip.start_date)}
+                    </span>{' '}
+                    ~{' '}
+                    <span className="font-semibold text-sm">
+                      {formatDate(trip.end_date)}
+                    </span>
                   </div>
-                  <Dialog>
-                    <DialogTrigger>
-                      <MdPeopleAlt />
-                    </DialogTrigger>
-                    <DialogContent>
-                      <form onSubmit={handleAttendeeSubmit}>
-                        <label htmlFor="email">E-mail</label>
-                        <input
-                          type="email"
-                          name="email"
-                          id="email"
-                          onChange={handleChange}
-                        />
-                        <Button type="submit">新增</Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-              <p className="text-gray-600 text-xs">
-                <span>預算：</span>
-                {formatBudget(+trip.budget)}
-              </p>
-            </Card>
-          </div>
-        )}
-        <input
-          id="autocomplete"
-          ref={autocompleteRef}
-          type="text"
-          placeholder="搜尋"
-          className="my-4 w-[80%] p-2 border shadow-lg mx-8 xl:mx-12 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black hover:bg-slate-100"
-        />
-
-        <DragDropContext onDragEnd={onDragEnd}>
-          {searchResults.length > 0 && (
-            <Droppable droppableId="searchResults" type="card">
-              {(provided) => (
-                <div>
-                  <div className="flex justify-between mx-16">
-                    <h2 className="font-bold text-xl">搜尋結果</h2>
-                    <div
-                      className="text-blue-500 hover:text-blue-700 cursor-pointer"
-                      onClick={() => {
-                        setSearchResults([]);
-                      }}
-                    >
-                      清除搜尋結果
-                    </div>
+                  <div className="flex py-2 gap-4">
+                    <SaveTrip
+                      tripId={tripId}
+                      Authorization={Authorization}
+                      user={user}
+                    />
+                    <DownloadPDF tripId={tripId} />
+                    <AddAttendees
+                      tripId={tripId}
+                      attendees={attendees}
+                      tripCreator={trip.user_id}
+                    />
                   </div>
-                  <ul
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="min-h-[120px]  p-2"
-                  >
-                    {searchResults.map((result, index) => (
-                      <Dialog
-                        key={index}
-                        className="cursor-pointer hover:bg-gray-100 p-2 mb-2 rounded"
+                </div>
+                <p className="text-gray-600 text-xs">
+                  <span>預算：</span>
+                  {formatBudget(+trip.budget)}
+                </p>
+              </Card>
+            </div>
+          )}
+          <input
+            id="autocomplete"
+            ref={autocompleteRef}
+            type="text"
+            placeholder="搜尋"
+            className="my-4 mx-16 p-2 border shadow-lg  border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black hover:bg-slate-100"
+          />
+
+          <DragDropContext onDragEnd={onDragEnd}>
+            {searchResults.length > 0 && (
+              <Droppable droppableId="searchResults" type="card">
+                {(provided) => (
+                  <div>
+                    <div className="flex justify-between mx-16">
+                      <h2 className="font-bold text-xl">搜尋結果</h2>
+                      <div
+                        className="text-blue-500 hover:text-blue-700 cursor-pointer"
+                        onClick={() => {
+                          setSearchResults([]);
+                        }}
                       >
-                        <Draggable draggableId={result.place_id} index={index}>
-                          {(provided) => (
-                            <li
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className="bg-white border border-gray-200 mx-14 shadow-xl 
+                        清除搜尋結果
+                      </div>
+                    </div>
+                    <ul
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="min-h-[120px]  p-2"
+                    >
+                      {searchResults.map((result, index) => (
+                        <Dialog
+                          key={index}
+                          className="cursor-pointer hover:bg-gray-100 p-2 mb-2 rounded"
+                        >
+                          <Draggable
+                            draggableId={result.place_id}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <li
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="bg-white border border-gray-200 mx-14 shadow-xl 
                             rounded-lg p-2 mb-2 
                             cursor-move hover:bg-slate-100"
-                              onClick={() => {
-                                setCenter(result.geometry.location);
-                              }}
-                            >
-                              <DialogTrigger>
-                                <h3 className="text-lg font-bold">
-                                  {result.name}
-                                </h3>
-                              </DialogTrigger>
+                                onClick={() => {
+                                  setCenter(result.geometry.location);
+                                }}
+                              >
+                                <DialogTrigger>
+                                  <h3 className="text-lg font-bold">
+                                    {result.name}
+                                  </h3>
+                                </DialogTrigger>
 
-                              <DialogContent>
-                                <h3 className="text-lg font-bold">
-                                  {result.name}
-                                </h3>
-                                <p className="text-gray-700">
-                                  地址: {result.formatted_address}
-                                </p>
-                                {result.price_level && (
+                                <DialogContent>
+                                  <h3 className="text-lg font-bold">
+                                    {result.name}
+                                  </h3>
                                   <p className="text-gray-700">
-                                    價位: {result.price_level}
+                                    地址: {result.formatted_address}
                                   </p>
-                                )}
-                                {result.types && (
-                                  <p className="text-gray-700">
-                                    類型: {result.types.join(', ')}
-                                  </p>
-                                )}
-                                {result.url && (
-                                  <p className="text-gray-700">
-                                    <a
-                                      href={result.url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-blue-500 hover:text-blue-700"
-                                    >
-                                      詳細資訊
-                                    </a>
-                                  </p>
-                                )}
-                                <Button onClick={() => addPlaceToTrip(result)}>
-                                  新增到行程
-                                </Button>
-                                <Button
-                                  onClick={() =>
-                                    handleNearbySearch(map, result)
-                                  }
-                                >
-                                  搜尋鄰近景點
-                                </Button>
-                              </DialogContent>
-                            </li>
-                          )}
-                        </Draggable>
-                      </Dialog>
-                    ))}
-                    {provided.placeholder}
-                  </ul>
-                </div>
-              )}
-            </Droppable>
-          )}
-
-          {nearbyResults.length > 0 && (
-            <Droppable droppableId="nearbyResults" type="card">
-              {(provided) => (
-                <div>
-                  <div className="flex justify-between mx-16">
-                    <h2 className="font-bold text-xl">附近地點</h2>
-                    <div
-                      className="text-blue-500 hover:text-blue-700 cursor-pointer"
-                      onClick={() => {
-                        setNearbyResults([]);
-                      }}
-                    >
-                      清除附近地點
-                    </div>
+                                  {result.price_level && (
+                                    <p className="text-gray-700">
+                                      價位: {result.price_level}
+                                    </p>
+                                  )}
+                                  {result.types && (
+                                    <p className="text-gray-700">
+                                      類型: {result.types.join(', ')}
+                                    </p>
+                                  )}
+                                  {result.url && (
+                                    <p className="text-gray-700">
+                                      <a
+                                        href={result.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-blue-500 hover:text-blue-700"
+                                      >
+                                        詳細資訊
+                                      </a>
+                                    </p>
+                                  )}
+                                  <Button
+                                    onClick={() => addPlaceToTrip(result)}
+                                  >
+                                    新增到行程
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      handleNearbySearch(map, result)
+                                    }
+                                  >
+                                    搜尋鄰近景點
+                                  </Button>
+                                </DialogContent>
+                              </li>
+                            )}
+                          </Draggable>
+                        </Dialog>
+                      ))}
+                      {provided.placeholder}
+                    </ul>
                   </div>
-                  <ul
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="min-h-[120px] grid grid-cols-2 gap-x-2 mx-16"
-                  >
-                    {nearbyResults.map((result, index) => (
-                      <Dialog
-                        key={index}
-                        className="cursor-pointer hover:bg-gray-100 p-2 mb-2 rounded"
+                )}
+              </Droppable>
+            )}
+
+            {nearbyResults.length > 0 && (
+              <Droppable droppableId="nearbyResults" type="card">
+                {(provided) => (
+                  <div>
+                    <div className="flex justify-between mx-16">
+                      <h2 className="font-bold text-xl">附近地點</h2>
+                      <div
+                        className="text-blue-500 hover:text-blue-700 cursor-pointer"
+                        onClick={() => {
+                          setNearbyResults([]);
+                        }}
                       >
-                        <Draggable draggableId={result.place_id} index={index}>
-                          {(provided) => (
-                            <li
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className="bg-white border border-gray-200 shadow-xl 
+                        清除附近地點
+                      </div>
+                    </div>
+                    <ul
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="min-h-[120px] grid grid-cols-2 gap-x-2 mx-16"
+                    >
+                      {nearbyResults.map((result, index) => (
+                        <Dialog
+                          key={index}
+                          className="cursor-pointer hover:bg-gray-100 p-2 mb-2 rounded"
+                        >
+                          <Draggable
+                            draggableId={result.place_id}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <li
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="bg-white border border-gray-200 shadow-xl 
                               rounded-lg p-2 mb-2 
                               cursor-move hover:bg-slate-100"
-                              onClick={() => {
-                                setCenter(result.geometry.location);
-                              }}
-                            >
-                              <DialogTrigger>
-                                <h3 className="mark-on-map font-bold text-left">
-                                  {result.name}
-                                </h3>
-                              </DialogTrigger>
+                                onClick={() => {
+                                  setCenter(result.geometry.location);
+                                }}
+                              >
+                                <DialogTrigger>
+                                  <h3 className="mark-on-map font-bold text-left">
+                                    {result.name}
+                                  </h3>
+                                </DialogTrigger>
 
-                              <DialogContent>
-                                <h3 className="text-lg font-bold">
-                                  {result.name}
-                                </h3>
-                                <p className="text-gray-700">
-                                  地址: {result.vicinity}
-                                </p>
-                                {result.price_level && (
+                                <DialogContent>
+                                  <h3 className="text-lg font-bold">
+                                    {result.name}
+                                  </h3>
                                   <p className="text-gray-700">
-                                    價位: {result.price_level}
+                                    地址: {result.vicinity}
                                   </p>
-                                )}
-                                {result.rating && (
-                                  <p className="text-gray-700">
-                                    評分: {result.rating}
-                                  </p>
-                                )}
-                                {result.user_ratings_total && (
-                                  <p className="text-gray-700">
-                                    評論數: {result.user_ratings_total}
-                                  </p>
-                                )}
-                                {result.types && (
-                                  <p className="text-gray-700">
-                                    類型: {result.types.join(', ')}
-                                  </p>
-                                )}
-                                <Button onClick={() => addPlaceToTrip(result)}>
-                                  新增到行程
-                                </Button>
-                                <Button
-                                  onClick={() =>
-                                    handleNearbySearch(map, result)
-                                  }
-                                >
-                                  搜尋鄰近景點
-                                </Button>
-                              </DialogContent>
-                            </li>
-                          )}
-                        </Draggable>
-                      </Dialog>
-                    ))}
-                    {provided.placeholder}
-                  </ul>
-                </div>
-              )}
-            </Droppable>
-          )}
-          <div className="flex justify-between mx-16 mt-10">
-            <h2 className="text-xl font-bold">目前景點</h2>
-            {isAttendee && (
-              <Button className="bg-orange-200 text-black" onClick={addNewDay}>
-                新增一天
-              </Button>
+                                  {result.price_level && (
+                                    <p className="text-gray-700">
+                                      價位: {result.price_level}
+                                    </p>
+                                  )}
+                                  {result.rating && (
+                                    <p className="text-gray-700">
+                                      評分: {result.rating}
+                                    </p>
+                                  )}
+                                  {result.user_ratings_total && (
+                                    <p className="text-gray-700">
+                                      評論數: {result.user_ratings_total}
+                                    </p>
+                                  )}
+                                  {result.types && (
+                                    <p className="text-gray-700">
+                                      類型: {result.types.join(', ')}
+                                    </p>
+                                  )}
+                                  <Button
+                                    onClick={() => addPlaceToTrip(result)}
+                                  >
+                                    新增到行程
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      handleNearbySearch(map, result)
+                                    }
+                                  >
+                                    搜尋鄰近景點
+                                  </Button>
+                                </DialogContent>
+                              </li>
+                            )}
+                          </Draggable>
+                        </Dialog>
+                      ))}
+                      {provided.placeholder}
+                    </ul>
+                  </div>
+                )}
+              </Droppable>
             )}
-          </div>
-          <div className="grid">{boards}</div>
-        </DragDropContext>
-        <Comment />
+            <div className="flex justify-between mx-16 mt-10">
+              <h2 className="text-3xl font-bold pb-4">目前景點</h2>
+            </div>
+            <div className="grid">{boards}</div>
+          </DragDropContext>
+          {attendeeRole === 'attendee' && (
+            <Button
+              className="bg-orange-200 hover:bg-orange-400 text-black mx-16"
+              onClick={addNewDay}
+            >
+              新增一天
+            </Button>
+          )}
+          <Comment />
+        </div>
       </div>
 
-      <div
-        ref={mapRef}
-        id="map"
-        className="w-1/2 xl:w-2/3 border-gray-300 fixed bottom-0 right-0"
-      />
-    </div>
+      <div ref={mapRef} id="map" />
+    </Split>
   );
 };
 
