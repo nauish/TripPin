@@ -27,8 +27,10 @@ import {
   putChecklist,
   putChecklistItem,
 } from '../controllers/checklist.js';
-import { checkTripAttendees, checkTripAttendeesOptional } from '../middleware/attendees.js';
+import { checkTripAttendees, checkTripAttendeesOptional } from '../middleware/authorization.js';
 import generatePDF from '../controllers/pdf.js';
+import upload from '../middleware/multer.js';
+import { deleteUserFromTrip, putAttendee } from '../controllers/user.js';
 
 const router = Router();
 
@@ -43,7 +45,9 @@ router
 router
   .route('/v1/trips/:tripId/attendees/')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTripAttendees])
-  .post([authenticateJWT, addUserToTrip]);
+  .post([authenticateJWT, checkTripAttendeesOptional, addUserToTrip])
+  .put([authenticateJWT, checkTripAttendees, putAttendee])
+  .delete([authenticateJWT, checkTripAttendees, deleteUserFromTrip]);
 router
   .route('/v1/trips/:tripId/places/')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTripPlaces])
@@ -60,7 +64,10 @@ router
   .route('/v1/trips/:tripId/chat')
   .get([authenticateJWT, checkTripAttendees, getTripChat])
   .post([authenticateJWT, checkTripAttendees, getChatCompletion]);
-router.route('/v1/trips/:tripId/comments').get([getComments]).post([postComment]);
+router
+  .route('/v1/trips/:tripId/comments')
+  .get([getComments])
+  .post([upload.fields([{ name: 'photos', maxCount: 5 }]), postComment]);
 router
   .route('/v1/trips/:tripId/checklists')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getChecklists])
