@@ -68,8 +68,8 @@ export async function deleteChecklist(req: Request, res: Response) {
 export async function createChecklistItem(req: Request, res: Response) {
   try {
     const { checklistId } = req.params;
-    const { name } = req.body;
-    const result = await insertChecklistItem(name, +checklistId);
+    const { name, order } = req.body;
+    const result = await insertChecklistItem(name, +checklistId, order);
     return res.json({ data: result });
   } catch (error) {
     if (error instanceof Error) {
@@ -95,8 +95,8 @@ export async function getChecklistItems(req: Request, res: Response) {
 export async function putChecklistItem(req: Request, res: Response) {
   try {
     const { itemId } = req.params;
-    const { name, order, isComplete } = req.body;
-    const result = await updateChecklistItem(name, order, isComplete, +itemId);
+    const { name, isComplete } = req.body;
+    const result = await updateChecklistItem(name, isComplete, +itemId);
     return res.json({ data: result });
   } catch (error) {
     if (error instanceof Error) {

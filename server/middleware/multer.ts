@@ -1,8 +1,7 @@
-import multer, { FileFilterCallback } from 'multer';
+import multer from 'multer';
 import multerS3 from 'multer-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import { config } from 'dotenv';
-import { NextFunction, Request, Response } from 'express';
 import { nanoid } from 'nanoid';
 import path from 'path';
 
@@ -33,40 +32,25 @@ const diskStorage = multer.diskStorage({
     cb(null, 'uploads');
   },
   filename: (req, file, cb) => {
-    cb(null, `${nanoid(12)}.${path.extname(file.originalname)}`);
+    cb(null, `${nanoid(12)}${path.extname(file.originalname)}`);
   },
 });
 
-const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
-  if (
-    file.mimetype === 'image/jpeg' ||
-    file.mimetype === 'image/jpg' ||
-    file.mimetype === 'image/png' ||
-    file.mimetype === 'image/gif'
-  ) {
-    cb(null, true);
-  }
-  return cb(null, false);
-};
+export const uploadPhotos = multer({
+  storage: process.env.NODE_ENV === 'production' ? s3storage : diskStorage,
+  limits: {
+    fileSize: 1024 * 1024 * 5,
+  },
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
-export default function uploadCommentPhotos(req: Request, res: Response, next: NextFunction) {
-  const upload = multer({
-    storage: process.env.NODE_ENV === 'production' ? s3storage : diskStorage,
-    fileFilter,
-    limits: {
-      fileSize: 1024 * 1024 * 5,
-    },
-  }).array('photos', 5);
-  upload(req, res, (err: any) => {
-    if (!err) return next();
-
-    switch (err.code) {
-      case 'LIMIT_FILE_SIZE':
-        return res.status(400).json({ error: 'File size is too large' });
-      case 'LIMIT_UNEXPECTED_FILE':
-        return res.status(400).json({ error: 'Too many files to upload' });
-      default:
-        return res.status(400).json({ error: err.message });
+    if (mimetype && extname) {
+      return cb(null, true);
     }
-  });
-}
+    return cb(new Error('只允許上傳圖片檔案'));
+  },
+});
+
+export default uploadPhotos;
