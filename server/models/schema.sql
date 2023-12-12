@@ -27,6 +27,7 @@ CREATE TABLE trips (
 CREATE TABLE attendees (
   trip_id BIGINT NOT NULL,
   user_id BIGINT NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'attendee',
   PRIMARY KEY (trip_id, user_id),
   FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -46,20 +47,11 @@ CREATE TABLE places (
   location GEOGRAPHY(POINT, 4326) NOT NULL,
   marker_type VARCHAR(10) NOT NULL,
   type VARCHAR(50) NOT NULL,
+  budget INTEGER,
   note TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE TABLE followed (
-  follower_id BIGINT NOT NULL,
-  following_id BIGINT NOT NULL,
-  follow_date DATE NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  PRIMARY KEY (follower_id, following_id),
-  FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
-  FOREIGN KEY (following_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 CREATE TABLE saved_trips (
@@ -90,6 +82,13 @@ CREATE TABLE trip_comments (
   created_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (user_id) REFERENCES users (id),
   FOREIGN KEY (trip_id) REFERENCES trips (id)
+);
+
+CREATE TABLE trip_comment_photos (
+  id BIGSERIAL PRIMARY KEY,
+  trip_comment_id BIGINT NOT NULL,
+  photo VARCHAR(255) NOT NULL,
+  FOREIGN KEY (trip_comment_id) REFERENCES trip_comments (id) ON DELETE CASCADE
 );
 
 CREATE TABLE checklists (
