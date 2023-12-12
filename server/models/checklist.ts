@@ -15,14 +15,43 @@ export async function insertChecklist(name: string, tripId: number) {
 export async function selectChecklistsByTripId(tripId: number) {
   const results = await pool.query(
     `
-    SELECT id, name, trip_id
-    FROM checklists
+    SELECT  c.id as checklist_id,
+            c.name AS checklist_name,
+            ci.id AS item_id,
+            ci.name AS item_name,
+            ci.is_checked,
+            ci.item_order
+    FROM checklists c
+    LEFT JOIN checklist_items ci
+    ON c.id = ci.checklist_id 
     WHERE trip_id = $1
     `,
     [tripId],
   );
 
-  return results.rows;
+  const nestedChecklists: { [key: number]: any } = {};
+
+  results.rows.forEach((row) => {
+    if (!nestedChecklists[row.checklist_id]) {
+      nestedChecklists[row.checklist_id] = {
+        id: row.checklist_id,
+        name: row.checklist_name,
+        items: [],
+      };
+    }
+
+    if (row.item_id) {
+      nestedChecklists[row.checklist_id].items.push({
+        id: row.item_id,
+        name: row.item_name,
+        isChecked: row.is_checked,
+        order: row.item_order,
+      });
+    }
+  });
+
+  // Convert the object to an array of checklists
+  return Object.values(nestedChecklists);
 }
 
 export async function selectChecklistById(checklistId: number) {
@@ -63,13 +92,13 @@ export async function deleteChecklist(checklistId: number) {
   return results.rows;
 }
 
-export async function insertChecklistItem(name: string, checklistId: number) {
+export async function insertChecklistItem(name: string, checklistId: number, order: number) {
   const results = await pool.query(
     `
-    INSERT INTO checklist_items (name, id)
-    VALUES ($1, $2)
+    INSERT INTO checklist_items (name, checklist_id, item_order)
+    VALUES ($1, $2, $3)
   `,
-    [name, checklistId],
+    [name, checklistId, order],
   );
 
   return results.rows;
@@ -90,17 +119,16 @@ export async function selectChecklistItemsByChecklistId(checklistId: number) {
 
 export async function updateChecklistItem(
   name: string,
-  order: number,
   isChecked: boolean,
   checklistItemId: number,
 ) {
   const results = await pool.query(
     `
     UPDATE checklist_items
-    SET name = $1, order = $2, is_checked = $3
-    WHERE id = $4
+    SET name = $1, is_checked = $2
+    WHERE id = $3
     `,
-    [name, order, isChecked, checklistItemId],
+    [name, isChecked, checklistItemId],
   );
 
   return results.rows;

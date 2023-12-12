@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { insertComment, selectCommentsByTripId } from '../models/comment.js';
+import { insertComment, insertCommentPhotos, selectCommentsByTripId } from '../models/comment.js';
+import pool from '../models/dbPools.js';
 
 export async function getComments(req: Request, res: Response) {
   try {
@@ -15,13 +16,31 @@ export async function getComments(req: Request, res: Response) {
 }
 
 export async function postComment(req: Request, res: Response) {
+  const client = await pool.connect();
+  const { photos } = req.files as unknown as { photos: { filename: string; key: string }[] };
+
+  let photoFileNames: string[] = [];
+  if (process.env.NODE_ENV === 'production') {
+    photoFileNames = photos?.map((photo) => photo.key.split('/')[1]);
+  } else {
+    photoFileNames = photos?.map((photo) => photo.filename);
+  }
+
   try {
-    const result = await insertComment(req.body);
-    return res.json({ data: result });
+    await client.query('BEGIN');
+    const commentId = await insertComment(req.body);
+    if (photos && photos.length > 0) {
+      await insertCommentPhotos(commentId, photoFileNames);
+    }
+    await client.query('COMMIT');
+    return res.json({ data: { commentId } });
   } catch (error) {
+    await client.query('ROLLBACK');
     if (error instanceof Error) {
       return res.status(500).json({ error: error.message });
     }
     return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 }
