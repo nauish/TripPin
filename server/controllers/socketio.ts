@@ -25,31 +25,51 @@ function socketEvents(socket: Socket) {
 
   // Synchronize marking markers on map
   socket.on('getMarker', async (payload) => {
-    console.log(payload);
     socket.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
   });
   socket.on('addNewPlaceToTrip', (payload) => {
-    socket.to(payload.room).emit('addNewPlaceToTrip', payload);
+    io.sockets.to(payload.room).emit('addNewPlaceToTrip', payload);
   });
 
   socket.on('newEditLock', async (payload) => {
+    console.log(socket.id, 'newEditLock', payload);
     const { room, placeId } = payload;
-    const lockKey = `editLock:${room}:${placeId}`;
+    const lockKey = `editLock:${socket.id}:${room}:${placeId}`;
     const LOCK_EXPIRE_TIME = 60;
 
-    await cache.set(lockKey, '1', 'EX', LOCK_EXPIRE_TIME);
-    const lockKeys = (await cache.keys(`editLock:${room}:*`)) ?? [];
-    const locks = lockKeys.map((key) => key.split(':')[2]);
-
-    socket.to(room).emit('editLocks', { locks });
+    try {
+      const isAbleToGetLock = await cache.set(lockKey, '1', 'EX', LOCK_EXPIRE_TIME, 'NX');
+      if (!isAbleToGetLock) {
+        return;
+      }
+      // await cache.set(lockKey, '1', 'EX', LOCK_EXPIRE_TIME);
+      const lockKeys = (await cache.keys(`editLock:*:${room}:*`)) ?? [];
+      const locks = lockKeys.map((key) => key.split(':')[3]);
+      io.sockets.to(room).emit('editLocks', { locks: locks ?? [] });
+      setTimeout(async () => {
+        await cache.del(lockKey);
+        const newLockKeys = (await cache.keys(`editLock:*:${room}:*`)) ?? [];
+        const newLocks = newLockKeys.map((key) => key.split(':')[3]);
+        io.sockets.to(room).emit('editLocks', { locks: newLocks ?? [] });
+      }, LOCK_EXPIRE_TIME * 1000);
+    } catch (error) {
+      console.error('Redis is down:', error);
+    }
   });
 
   socket.on('newEditUnlock', async (payload) => {
+    console.log(socket.id, 'newEditUnlock', payload);
     const { room, placeId } = payload;
-    const lockKey = `editLock:${room}:${placeId}`;
-    await cache.del(lockKey);
-    const locks = ((await cache.keys(`editLock:${room}:*`)) ?? []).map((key) => key.split(':')[2]);
-    socket.to(room).emit('editLocks', { locks });
+    const lockKey = `editLock:${socket.id}:${room}:${placeId}`;
+
+    try {
+      await cache.del(lockKey);
+      const lockKeys = (await cache.keys(`editLock:*:${room}:*`)) ?? [];
+      const locks = lockKeys.map((key) => key.split(':')[3]);
+      io.sockets.to(room).emit('editLocks', { locks: locks ?? [] });
+    } catch (error) {
+      console.error('Redis is down:', error);
+    }
   });
 }
 
