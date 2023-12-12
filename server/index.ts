@@ -26,14 +26,12 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use('/uploads', express.static('./uploads'));
+app.use('./public', express.static('./public'));
 
 app.use('/api', rateLimiter, [userRouter, tripRouter, authRouter]);
-
-app.use(express.static('public'));
-
-app.get('/*', (req, res) => {
-  res.sendFile('index.html', { root: 'public' });
-});
 
 app.use(errorHandler);
 
