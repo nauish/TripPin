@@ -128,3 +128,32 @@ export async function getProfile(req: Request, res: Response) {
     return res.status(500).json({ error: 'Get profile failed' });
   }
 }
+
+export async function putAttendee(req: Request, res: Response) {
+  try {
+    const { userId, role } = req.body;
+    const { tripId } = req.params;
+    const count = await userModel.updateUserRole(+tripId, +userId, role);
+    if (count === 0) throw new Error('無法修改');
+    return res.status(200).json({ data: { message: '成功修改參加者！' } });
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(400).json({ error: err.message });
+    }
+    return res.status(500).json({ error: '出錯了！' });
+  }
+}
+
+export async function deleteUserFromTrip(req: Request, res: Response) {
+  try {
+    const { userId } = req.body;
+    const { tripId } = req.params;
+    await userModel.deleteAttendeeFromTrip(+userId, +tripId);
+    return res.status(200).json({ data: { message: '成功刪除參加者！' } });
+  } catch (err) {
+    if (err instanceof Error) {
+      return res.status(400).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
