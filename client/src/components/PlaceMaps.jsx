@@ -1,26 +1,17 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { FaDirections } from 'react-icons/fa';
 import { FaRegCalendarDays } from 'react-icons/fa6';
 import { formatDate, formatBudget } from '@/lib/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import useMapApi from '@/hooks/useMapApi';
 import Comment from './Comment';
 import { Card, CardTitle } from './ui/card';
 import AddAttendees from './AddAttendees';
-import { BsPersonWalking } from 'react-icons/bs';
-import { FaCarAlt } from 'react-icons/fa';
 import DownloadPDF from './DownloadPDF';
 import Split from 'react-split';
 import SaveTrip from './SaveTrip';
@@ -30,6 +21,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import CopyTrip from './CopyTrip';
+import PlaceItem from './PlaceItem';
 
 const reorder = (list, startIndex, end) => {
   const result = Array.from(list);
@@ -87,6 +80,10 @@ const PlacesMaps = () => {
         console.log(error);
       });
 
+    fetchAttendees();
+  }, []);
+
+  const fetchAttendees = useCallback(() => {
     // Check if user is attendee
     if (!user) return;
     fetch(`${TRIP_API_URL}/attendees`, {
@@ -100,16 +97,17 @@ const PlacesMaps = () => {
         setAttendees(attendees);
         const attendee = attendees.find((attendee) => +attendee.id === user.id);
         SetAttendeeRole(attendee?.role);
+        if (attendee?.role === 'attendee') {
+          socket.emit('newUserInRoom', { name: user.name, room: tripId });
+          socket.on('editLocks', (payload) => {
+            setLockedPlaces(payload.locks);
+          });
+        }
       })
       .catch((error) => {
         console.log(error);
       });
-    if (user) {
-      socket.emit('newUserInRoom', { name: user.name, room: tripId });
-      socket.on('editLocks', (payload) => {
-        setLockedPlaces(payload.locks);
-      });
-    }
+
     return () => {
       socket.off('editLocks');
     };
@@ -152,6 +150,7 @@ const PlacesMaps = () => {
       const [mapsLib, placesLib] = await Promise.all([
         loader.importLibrary('maps'),
         loader.importLibrary('places'),
+        loader,
       ]);
       const map = await new mapsLib.Map(mapRef.current, {
         center: { lat: 25.085, lng: 121.39 },
@@ -304,32 +303,23 @@ const PlacesMaps = () => {
     setData([...data, { dayNumber: maxDay + 1, places: [] }]);
   };
 
-  const deletePlace = async (placeId) => {
-    const response = await fetch(`${TRIP_API_URL}/places/${placeId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization,
-      },
-    });
-
-    if (response.status === 200) {
-      socket.emit('addNewPlaceToTrip', { room: tripId });
-      toast('景點已刪除');
-    }
-  };
-
   const onDragEnd = (result) => {
     const { destination, source, type } = result;
     if (!destination) return;
+
     if (lockedPlaces.includes(source.droppableId)) {
       toast('此景點正在被編輯');
       return;
     }
+
+    if (attendeeRole !== 'attendee') {
+      toast.warning('您僅能查看此行程，複製這份行程以編輯');
+      return;
+    }
+
     if (
-      (source.droppableId === destination.droppableId &&
-        destination.index === source.index) ||
-      !attendeeRole === 'attendee'
+      source.droppableId === destination.droppableId &&
+      destination.index === source.index
     )
       return;
 
@@ -431,26 +421,6 @@ const PlacesMaps = () => {
       });
   };
 
-  const copyTrip = async () => {
-    try {
-      const response = await fetch(`${TRIP_API_URL}/places`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      if (response.status === 200) {
-        toast('已複製行程');
-      } else {
-        const json = await response.json();
-        console.log(json);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   const updateData = async (data, placeId) => {
     try {
       const response = await fetch(`${TRIP_API_URL}/places/${placeId}`, {
@@ -474,293 +444,74 @@ const PlacesMaps = () => {
     }
   };
 
-  const DayPlaces = ({ day }) => {
-    return (
-      <ul>
-        {day.places.map((place, index) => (
-          <div key={place.id}>
-            <PlaceItem
-              place={place}
-              updateData={updateData}
-              centerToTheMarker={centerToTheMarker}
-              index={index}
-            />
-          </div>
-        ))}
-      </ul>
-    );
-  };
-
-  const PlaceItem = ({ place, updateData, centerToTheMarker, index }) => {
-    const [formData, setFormData] = useState({ ...place });
-
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
-      console.log(formData);
-    };
-
-    const formatDistance = (distance) => {
-      const distanceInM = distance * 100000;
-      if (distanceInM === 0) return;
-      if (distanceInM < 1000) return `${distanceInM.toFixed(0)} 公尺`;
-      return `${(distanceInM / 1000).toFixed(2)} 公里`;
-    };
-
-    const calculateSuggestTransportation = (distance) => {
-      const distanceInM = distance * 100000;
-      if (distanceInM === 0) return;
-      const walkingTime = (distanceInM / 80).toFixed(0);
-      const drivingTime = (distanceInM / 400).toFixed(0);
-      if (distanceInM < 1000)
-        return (
-          <>
-            <BsPersonWalking />
-            {walkingTime}分鐘
-          </>
-        );
-      return (
-        <>
-          <FaCarAlt />
-          {drivingTime}分鐘
-        </>
-      );
-    };
-
-    const formatTime = (time) => {
-      return new Date('1970-01-01T' + time + 'Z').toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    };
-
-    return (
-      <Draggable key={place.id} draggableId={place.id} index={index}>
-        {(provided) => (
-          <li
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-          >
-            {formatDistance(place.distance_from_previous) && (
-              <div className="flex justify-center">
-                <span className="text-sm text-gray-600 flex items-center">
-                  {calculateSuggestTransportation(place.distance_from_previous)}
-                  {' - '}
-                  {formatDistance(place.distance_from_previous)}
-                  <a
-                    href={`https://www.google.com/maps/dir/${place.name}/${place.previous_place_name}/@${place.latitude},${place.longitude}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    <FaDirections />
-                  </a>
-                </span>
-              </div>
-            )}
-            <div
-              className={` ${
-                lockedPlaces.includes(place.id) ? 'bg-red-200' : ''
-              } bg-gray-100 
-            rounded-lg p-4 mb-2 
-            cursor-move hover:bg-slate-100`}
-            >
-              <span className="text-sm text-gray-700">
-                {place.start_hour && formatTime(place.start_hour)}
-                {place.start_hour && place.end_hour && ' - '}
-                {place.end_hour && formatTime(place.end_hour)}
-              </span>
-              <h3 className="text-md font-semibold">{place.name}</h3>
-              <p className="text-gray-600 text-[15px] mb-1">{place.address}</p>
-              {lockedPlaces.includes(place.id) && (
-                <p className="text-red-500">此景點正在被編輯</p>
-              )}
-            </div>
-
-            {attendeeRole === 'attendee' && (
-              <div>
-                <a
-                  className="z-10 cursor-pointer mr-2"
-                  onClick={() => {
-                    setClickLocation({
-                      lat: place.latitude,
-                      lng: place.longitude,
-                    });
-                    centerToTheMarker(place.latitude, place.longitude);
-                  }}
-                >
-                  看地圖
-                </a>
-
-                <Dialog>
-                  <DialogTrigger>
-                    {!lockedPlaces.includes(place.id) && (
-                      <div
-                        className="text-blue-500 hover:text-blue-700 mr-2"
-                        onClick={() => {
-                          socket.emit('newEditLock', {
-                            room: tripId,
-                            name: user.name,
-                            placeId: place.id,
-                          });
-                        }}
-                      >
-                        編輯
-                      </div>
-                    )}
-                  </DialogTrigger>
-
-                  <DialogContent
-                    onClose={() => {
-                      socket.emit('newEditUnlock', {
-                        room: tripId,
-                        name: user.name,
-                        placeId: place.id,
-                      });
-                    }}
-                  >
-                    <DialogHeader>
-                      <DialogTitle>{place.name}</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex items-center space-x-2">
-                      <label className="text-gray-600">標籤：</label>
-                      <input
-                        type="text"
-                        name="tag"
-                        className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        value={formData.tag || undefined}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <label className="text-gray-600">種類：</label>
-                      <input
-                        type="text"
-                        name="type"
-                        className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        value={formData.type || undefined}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <label className="text-gray-600 mt-2">筆記：</label>
-                      <textarea
-                        type="text"
-                        name="note"
-                        className="border border-gray-300 px-2 py-1 rounded w-full h-32 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        value={formData.note || undefined}
-                        onChange={handleChange}
-                      ></textarea>
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => {
-                          updateData(formData, place.id);
-                          socket.emit('newEditUnlock', {
-                            room: tripId,
-                            name: user.name,
-                            placeId: place.id,
-                          });
-                        }}
-                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                      >
-                        儲存
-                      </button>
-                      <button
-                        onClick={() => {
-                          deletePlace(place.id);
-                          socket.emit('newEditUnlock', {
-                            room: tripId,
-                            name: user.name,
-                            placeId: place.id,
-                          });
-                        }}
-                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700"
-                      >
-                        刪除
-                      </button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                {!lockedPlaces.includes(place.id) && (
-                  <button
-                    onClick={() => deletePlace(place.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    刪除
-                  </button>
-                )}
-              </div>
-            )}
-          </li>
-        )}
-      </Draggable>
-    );
-  };
-
   const boards = data.map((day) => (
-    <Accordion
-      type="single"
-      collapsible
+    <Droppable
+      droppableId={day.dayNumber.toString()}
+      type="card"
       key={day.dayNumber}
-      className="bg-white border-gray-300 px-16"
     >
-      <AccordionItem value={`item-${day.dayNumber}`}>
-        <AccordionTrigger>
-          <h2 className="text-xl font-bold mb-2">第 {day.dayNumber} 天</h2>
-          <span className="text-gray-600 ml-auto">
-            {day.places.length} 個地點
-          </span>
-        </AccordionTrigger>
-        <AccordionContent>
-          <Droppable droppableId={day.dayNumber.toString()} type="card">
-            {(provided) => (
-              <ul
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="min-h-[120px]"
-              >
-                <DayPlaces day={day} />
+      {(provided) => (
+        <ul ref={provided.innerRef} {...provided.droppableProps}>
+          <Accordion
+            type="single"
+            collapsible
+            className="bg-white border-gray-300 px-16"
+            defaultValue={`item-${day.dayNumber}`}
+          >
+            <AccordionItem value={`item-${day.dayNumber}`}>
+              <AccordionTrigger>
+                <h2 className="text-xl font-bold mb-2">
+                  第 {day.dayNumber} 天
+                </h2>
+                <span className="text-gray-600 ml-auto">
+                  {day.places.length} 個地點
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                {day.places.map((place, index) => (
+                  <PlaceItem
+                    place={place}
+                    index={index}
+                    tripId={tripId}
+                    user={user}
+                    attendeeRole={attendeeRole}
+                    setClickLocation={setClickLocation}
+                    key={place.id}
+                    updateData={updateData}
+                    lockedPlace={lockedPlaces}
+                    centerToTheMarker={centerToTheMarker}
+                  />
+                ))}
                 {provided.placeholder}
-              </ul>
-            )}
-          </Droppable>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          {provided.placeholder}
+        </ul>
+      )}
+    </Droppable>
   ));
+
+  const handleAddAttendee = () => {
+    fetchAttendees();
+  };
+
+  const handleRemoveAttendee = (removedAttendeeId) => {
+    setAttendees(
+      attendees.filter((attendee) => attendee.id !== removedAttendeeId),
+    );
+  };
 
   return (
     <Split
       className="split"
       gutterSize={5}
-      minSize={[450]}
-      sizes={[30, 70]}
+      minSize={[500, 0]}
+      sizes={[40, 60]}
       expandToMin={true}
     >
       <div className="overflow-auto h-[94vh]">
         <div className="flex flex-col">
-          <Button
-            onClick={() => {
-              addMarker();
-            }}
-            className="mark-on-map absolute bg-white text-black hover:bg-gray-300 z-10 top-[75px] right-16 py-2 px-4"
-          >
-            將標記傳給同伴
-          </Button>
-
-          <Button
-            onClick={copyTrip}
-            className="absolute bg-white text-black hover:bg-gray-300 z-10 top-[75px] right-[200px] py-2 px-4"
-          >
-            複製行程
-          </Button>
-
           {trip && (
             <div className="flex flex-col">
               <img
@@ -787,11 +538,14 @@ const PlacesMaps = () => {
                       Authorization={Authorization}
                       user={user}
                     />
+                    <CopyTrip TRIP_API_URL={TRIP_API_URL} />
                     <DownloadPDF tripId={tripId} />
                     <AddAttendees
                       tripId={tripId}
                       attendees={attendees}
                       tripCreator={trip.user_id}
+                      onAttendeeAdd={handleAddAttendee}
+                      onAttendeeRemove={handleRemoveAttendee}
                     />
                   </div>
                 </div>
@@ -1010,6 +764,7 @@ const PlacesMaps = () => {
                 )}
               </Droppable>
             )}
+            {/* <Checklist user={user} /> */}
             <div className="flex justify-between mx-16 mt-10">
               <h2 className="text-3xl font-bold pb-4">目前景點</h2>
             </div>
@@ -1027,7 +782,18 @@ const PlacesMaps = () => {
         </div>
       </div>
 
-      <div ref={mapRef} id="map" />
+      <div style={{ position: 'relative' }}>
+        {attendeeRole === 'attendee' && (
+          <Button
+            onClick={addMarker}
+            className="absolute top-[10px] left-[180px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+          >
+            將標記傳給同伴
+          </Button>
+        )}
+
+        <div ref={mapRef} className="h-full" id="map" />
+      </div>
     </Split>
   );
 };
