@@ -76,9 +76,10 @@ export async function selectPlacesByTripId(TripId: number) {
         ST_X(location::geometry) AS longitude,
         ST_Y(location::geometry) AS latitude,
         ST_Distance(
-          LAG(p.location::geometry) OVER (PARTITION BY p.trip_id ORDER BY p.dnd_order), 
+          LAG(p.location::geometry) OVER (PARTITION BY p.trip_id ORDER BY p.day_number, p.dnd_order), 
           p.location::geometry
-        ) AS distance_from_previous
+        ) AS distance_from_previous,
+        LAG(p.name) OVER (PARTITION BY p.trip_id ORDER BY p.day_number, p.dnd_order) AS previous_place_name
       FROM places p
       WHERE p.trip_id = $1
     `,

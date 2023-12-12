@@ -13,13 +13,16 @@ import { insertPlace, selectPlacesByTripId } from '../models/place.js';
 import { selectTripsAttendedByUser, selectUserByEmail } from '../models/user.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import PRIVACY_SETTING from '../constants/privacySetting.js';
+import pool from '../models/dbPools.js';
 
 export async function createTrip(req: Request, res: Response) {
+  const client = await pool.connect();
   try {
     const { userId } = res.locals;
     const { name, destination, budget, startDate, endDate, privacySetting, type, note, photo } =
       req.body;
     if (!name || !privacySetting) throw new ValidationError('Missing required fields');
+    await client.query('BEGIN');
     const tripId = await insertTrip({
       user_id: userId,
       destination,
@@ -32,12 +35,17 @@ export async function createTrip(req: Request, res: Response) {
       note,
       photo,
     });
+    await insertAttendee(userId, tripId);
+    await client.query('COMMIT');
     return res.json({ data: { tripId } });
   } catch (err) {
+    await client.query('ROLLBACK');
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
     }
     return res.status(500).json({ error: 'Something went wrong' });
+  } finally {
+    client.release();
   }
 }
 
@@ -63,25 +71,23 @@ export async function getTripAttendees(req: Request, res: Response) {
 }
 
 export async function addUserToTrip(req: Request, res: Response) {
-  const { email, userId } = req.body;
+  const { email } = req.body;
   const { tripId } = req.params;
-
+  if (!email) {
+    return res.status(400).json({ error: '請輸入email' });
+  }
   try {
-    if (userId) {
-      await insertAttendee(+userId, +tripId);
-      return res.status(200).json({ data: { message: 'Join trip successfully' } });
-    }
     const userIdFromDB = await selectUserByEmail(email);
     if (!userIdFromDB) {
-      return res.status(400).json({ error: 'User not found' });
+      return res.status(400).json({ error: '使用者不存在' });
     }
-    await insertAttendee(userIdFromDB.id, +tripId);
+    const data = await insertAttendee(userIdFromDB.id, +tripId);
 
-    return res.status(200).json({ data: { message: 'Join trip successfully' } });
+    return res.status(200).json({ data });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('duplicate key value violates unique constraint')) {
-        return res.status(400).json({ error: 'User already joined trip' });
+        return res.status(400).json({ error: '使用者已經在行程中' });
       }
       return res.status(400).json({ error: error.message });
     }

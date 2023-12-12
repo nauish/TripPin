@@ -71,7 +71,8 @@ export async function selectCompleteTripInfo(id: number) {
         ST_Distance(
           LAG(p.location::geometry) OVER (PARTITION BY p.trip_id ORDER BY p.dnd_order), 
           p.location::geometry
-        ) AS distance_from_previous
+        ) AS distance_from_previous,
+        LAG(p.name) OVER (PARTITION BY p.trip_id ORDER BY p.dnd_order) AS previous_place_name
       FROM places p
       WHERE p.trip_id = $1
     )
@@ -109,29 +110,39 @@ export async function selectCompleteTripInfo(id: number) {
           )
         )
       )
-    FROM PlaceDistances pd
-    JOIN trips t ON pd.trip_id = t.id
+    FROM trips t
+    JOIN PlaceDistances pd ON pd.trip_id = t.id
     JOIN users u ON t.user_id = u.id
-    JOIN attendees a ON t.id = a.trip_id
     GROUP BY t.id, u.id;
   `,
     [id],
   );
 
   const [trip] = results.rows;
+  console.log(trip);
 
   return trip.json_build_object as Trip;
 }
 
-export async function insertAttendee(userId: number, tripId: number) {
-  const results = await pool.query(
-    `
-    INSERT INTO attendees (trip_id, user_id) 
-    VALUES ($1, $2) RETURNING user_id
-    `,
-    [tripId, userId],
-  );
-
+export async function insertAttendee(userId: number, tripId: number, role?: string) {
+  let results;
+  if (role) {
+    results = await pool.query(
+      `
+      INSERT INTO attendees (trip_id, user_id, role) 
+      VALUES ($1, $2, $3) RETURNING user_id
+      `,
+      [tripId, userId, role],
+    );
+  } else {
+    results = await pool.query(
+      `
+      INSERT INTO attendees (trip_id, user_id) 
+      VALUES ($1, $2) RETURNING user_id
+      `,
+      [tripId, userId],
+    );
+  }
   const result = results.rows[0];
   if (result) return result;
   throw new Error('Insert new attendee failed');
@@ -140,11 +151,15 @@ export async function insertAttendee(userId: number, tripId: number) {
 export async function selectAttendeesByTripId(tripId: number) {
   const results = await pool.query(
     `
-    SELECT t.user_id FROM trips t
-    WHERE t.id = $1
-    UNION ALL
-    SELECT a.user_id FROM attendees a
-    WHERE trip_id = $1
+    SELECT
+          u.id,
+          u.name,
+          u.email,
+          u.photo,
+          a.role
+    FROM attendees a
+    JOIN users u ON a.user_id = u.id
+    WHERE a.trip_id = $1
     `,
     [tripId],
   );

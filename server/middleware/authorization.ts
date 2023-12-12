@@ -29,7 +29,10 @@ export async function checkTripAttendees(req: Request, res: Response, next: Next
 
     if (!userId) throw new Error("You don't have permission to access this trip");
     const result = await selectAttendeesByTripIdAndUserId(+tripId, userId);
-    if (!result) throw new Error("You don't have permission to access this trip");
+    console.log(result);
+    if (!result || result.role !== 'attendee') {
+      throw new Error('您沒有權限編輯這個行程');
+    }
 
     return next();
   } catch (error) {

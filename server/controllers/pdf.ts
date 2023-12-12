@@ -32,6 +32,14 @@ export async function generateTripPDF(req: Request, res: Response) {
     doc.fontSize(14).text(`備註: ${tripData.note || '無'}`);
     doc.moveDown();
 
+    // If the trip has no places, return a PDF with a message
+    if (tripData.places[0].id === null) {
+      doc.fontSize(14).text('此行程無景點');
+      doc.pipe(res);
+      doc.end();
+      return null;
+    }
+
     tripData.places.sort((a, b) => {
       if (a.day_number !== b.day_number) {
         return a.day_number - b.day_number;

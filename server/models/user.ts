@@ -12,6 +12,7 @@ const UserSchema = z.object({
 
 const AttendeeSchema = z.object({
   user_id: z.coerce.number(),
+  role: z.string().optional(),
 });
 
 export async function insertUser(
@@ -59,17 +60,14 @@ export async function selectUserById(id: number) {
 export async function selectAttendeesByTripIdAndUserId(tripId: number, userId: number) {
   const results = await pool.query(
     `
-    SELECT a.user_id FROM attendees a
+    SELECT * FROM attendees a
     WHERE trip_id = $1 AND a.user_id = $2
-    UNION ALL
-    SELECT t.user_id FROM trips t
-    WHERE t.id = $1 AND t.user_id = $2
     `,
     [tripId, userId],
   );
 
   const [attendees] = z.array(AttendeeSchema).parse(results.rows);
-  return attendees.user_id;
+  return attendees;
 }
 
 export async function selectTripsAttendedByUser(userId: number) {
@@ -78,10 +76,33 @@ export async function selectTripsAttendedByUser(userId: number) {
     SELECT t.id, t.name, t.destination, t.start_date, t.end_date, t.budget, t.type, t.privacy_setting, t.note, t.photo
     FROM trips t
     JOIN attendees a ON t.id = a.trip_id
-    WHERE a.user_id = $1
+    WHERE a.user_id = $1 and t.user_id != $1
     `,
     [userId],
   );
 
   return results.rows;
+}
+
+export async function updateUserRole(tripId: number, userId: number, role: string) {
+  const results = await pool.query(
+    `
+    UPDATE attendees
+    SET role = $1
+    WHERE trip_id = $2 AND user_id = $3
+    `,
+    [role, tripId, userId],
+  );
+  return results.rowCount;
+}
+
+export async function deleteAttendeeFromTrip(tripId: number, userId: number) {
+  const results = await pool.query(
+    `
+    DELETE FROM attendees
+    WHERE trip_id = $1 AND user_id = $2
+    `,
+    [tripId, userId],
+  );
+  return results.rowCount;
 }
