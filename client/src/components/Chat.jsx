@@ -25,9 +25,7 @@ const Chat = () => {
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/chat`, {
-      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
       },
     })
@@ -41,7 +39,6 @@ const Chat = () => {
         setError(err);
       });
 
-    socket.emit('newUserInRoom', { name: user.name, room: tripId });
     socket.on('newChatMessage', (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
     });

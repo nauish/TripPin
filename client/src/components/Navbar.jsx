@@ -7,17 +7,25 @@ export function Navbar() {
       flex justify-between items-center 
     top-0 left-0 right-0 z-50 fixed border-b"
     >
-      <div className="flex items-center">
-        <Link to="/" reloadDocument className="ml-4 xl:ml-14">
+      <Link to="/" reloadDocument className="ml-4 xl:ml-14">
+        <div className="flex items-center">
           <img className="h-12 mt-auto" src="../logo.png" alt="Logo" />
+          <div className="font-bold">TripPin</div>
+        </div>
+      </Link>
+      <div className="flex gap-4 font-bold ">
+        <Link className="hover:text-gray-600" to="/trip/">
+          新增行程
         </Link>
-        TripPin
-      </div>
-      <div className="flex gap-4 font-bold">
-        <Link to="/trip/">新增行程</Link>
-        <Link to="/user/trips">我建立的行程</Link>
-        <Link to="user/saved">收藏的行程</Link>
-        <Link to="/user/attended">加入的行程</Link>
+        <Link className="hover:text-gray-600" to="/user/trips">
+          我建立的行程
+        </Link>
+        <Link className="hover:text-gray-600" to="user/saved">
+          收藏的行程
+        </Link>
+        <Link className="hover:text-gray-600" to="/user/attended">
+          加入的行程
+        </Link>
       </div>
       <div className="flex justify-center items-center">
         <div className="navbar-icons flex justify-around">

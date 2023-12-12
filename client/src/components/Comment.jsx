@@ -1,11 +1,15 @@
 import { useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { IoIosStar } from 'react-icons/io';
 import { Button } from './ui/button';
-import { Card } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import { cn } from '@/lib/utils';
+import { Dialog, DialogClose, DialogContent, DialogTrigger } from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
-const StarRating = ({ rating, onClick }) => {
+const StarRating = ({ rating, onClick, className }) => {
   const maxRating = 5;
 
   return (
@@ -14,9 +18,12 @@ const StarRating = ({ rating, onClick }) => {
         <IoIosStar
           key={index}
           onClick={() => onClick(index + 1)} // Ratings start from 1
-          className={`cursor-pointer inline-block ${
-            index < rating ? 'text-yellow-500' : 'text-gray-300'
-          } text-lg`}
+          className={cn(
+            `inline-block ${
+              index < rating ? 'text-yellow-500' : 'text-gray-300'
+            }`,
+            className,
+          )}
         />
       ))}
     </div>
@@ -26,24 +33,37 @@ const StarRating = ({ rating, onClick }) => {
 const Comment = () => {
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState('');
+  const [open, setOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
   const [rating, setRating] = useState(0);
+  const [files, setFiles] = useState(null);
   const { tripId } = useParams();
 
-  const postComment = (comment) => {
+  const handleFileChange = (e) => {
+    console.log(e.target.files);
+    setFiles(e.target.files);
+  };
+
+  const postComment = (formData) => {
     fetch(
       `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/comments`,
       {
         method: 'POST',
+        body: formData,
         headers: {
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
-        body: JSON.stringify(comment),
       },
     )
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+        return response.json();
+      })
       .then((json) => {
-        setComments([...comments, { username: user.name, ...json.data[0] }]);
+        console.log(json);
+        fetchComments();
       });
   };
 
@@ -55,23 +75,46 @@ const Comment = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    postComment({
-      user_id: user.id,
-      trip_id: tripId,
-      comment: input,
-      rating: rating,
-    });
+
+    const formData = new FormData();
+    if (files) {
+      for (let i = 0; i < files.length; i++) {
+        formData.append('photos', files[i]);
+      }
+    }
+    formData.append('user_id', user.id);
+    formData.append('trip_id', tripId);
+    formData.append('comment', input);
+    formData.append('rating', rating);
+
+    postComment(formData);
     setInput('');
+    setFiles(null);
+    setRating(0);
   };
 
-  useEffect(() => {
+  const fetchComments = useCallback(() => {
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/comments`)
-      .then((response) => response.json())
-      .then((json) => setComments(json.data));
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+        return response.json();
+      })
+      .then((json) => {
+        if (json.data) {
+          console.log(json.data);
+          setComments(json.data);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    fetchComments();
   }, []);
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    return new Date(dateString).toLocaleString('zh-TW', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -82,21 +125,70 @@ const Comment = () => {
 
   return (
     <Card className="bg-white p-4 mx-16 my-4">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">評論</h2>
-      <form
-        onSubmit={handleSubmit}
-        className="flex items-center space-x-2 mt-4"
-      >
-        <textarea
-          type="text"
-          value={input}
-          onChange={handleChange}
-          className="flex-1 border border-gray-300 rounded-lg p-2"
-          placeholder="寫下對這個行程的心得吧！"
-        />
-        <StarRating rating={rating} onClick={handleRatingChange} />
-        <Button type="submit">評論</Button>
-      </form>
+      <div className="flex justify-between ">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">評論</h2>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>新增評論</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <CardHeader>
+              <CardTitle>新增評論</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="grid space-y-2">
+                <div className="flex justify-center">
+                  <StarRating
+                    className="cursor-pointer text-3xl mb-4"
+                    rating={rating}
+                    onClick={handleRatingChange}
+                  />
+                </div>
+
+                <textarea
+                  type="text"
+                  value={input}
+                  onChange={handleChange}
+                  className="flex-1 border border-gray-300 rounded-lg p-2 min-h-[100px]"
+                  placeholder="寫下對這個行程的心得吧！"
+                  required
+                />
+
+                <Label htmlFor="photos" className="pt-2">
+                  上傳圖片
+                </Label>
+                <Input
+                  type="file"
+                  name="photos"
+                  id="photos"
+                  accept="image/*"
+                  className="cursor-pointer"
+                  encType="multipart/form-data"
+                  onChange={handleFileChange}
+                  multiple
+                />
+                <div className="flex gap-2">
+                  <DialogClose asChild>
+                    <Button className="w-full bg-gray-500">取消</Button>
+                  </DialogClose>
+                  <Button
+                    className="w-full"
+                    type="submit"
+                    onClick={() => {
+                      if (input) {
+                        setOpen(false);
+                      }
+                    }}
+                  >
+                    評論
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {comments &&
         comments.map((comment, index) => (
           <div key={index} className="flex items-start space-x-2 my-2">
@@ -107,7 +199,11 @@ const Comment = () => {
             <div className="flex-1">
               <div className="text-sm font-semibold text-gray-900">
                 {comment.username}
-                <StarRating rating={comment.rating} />
+                <StarRating
+                  className="text-sm -mt-2"
+                  rating={comment.rating}
+                  onClick={() => null}
+                />
               </div>
               <p className="text-sm text-gray-800">{comment.comment}</p>
               <div className="flex items-center space-x-1">
@@ -115,6 +211,18 @@ const Comment = () => {
                   {formatDate(comment.created_at)}
                 </span>
               </div>
+              {comment.photos &&
+                comment.photos.map((photo, index) =>
+                  photo ? (
+                    <img
+                      key={index}
+                      className="w-1/4 h-1/4"
+                      src={`${
+                        import.meta.env.VITE_BACKEND_HOST
+                      }uploads/${photo}`}
+                    />
+                  ) : null,
+                )}
             </div>
           </div>
         ))}
