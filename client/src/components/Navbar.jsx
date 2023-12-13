@@ -9,7 +9,7 @@ export function Navbar() {
     >
       <Link to="/" reloadDocument className="ml-4 xl:ml-14">
         <div className="flex items-center">
-          <img className="h-12 mt-auto" src="../logo.png" alt="Logo" />
+          <img className="h-12 mt-auto" src="/logo.png" alt="Logo" />
           <div className="font-bold">TripPin</div>
         </div>
       </Link>
