@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { FaHeart } from 'react-icons/fa6';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const SaveTrip = ({ tripId, Authorization, user }) => {
   const [isSaved, setIsSaved] = useState(false);
@@ -20,7 +21,6 @@ const SaveTrip = ({ tripId, Authorization, user }) => {
         return response.json();
       })
       .then((json) => {
-        console.log(json);
         if (json.data && json.data.find((trip) => trip.id === tripId)) {
           setIsSaved(true);
         }
@@ -49,21 +49,27 @@ const SaveTrip = ({ tripId, Authorization, user }) => {
         setIsSaved(!isSaved);
       });
   };
+
   return (
-    <div
-      onClick={() => {
-        {
-          savedTrip(tripId);
-        }
-      }}
-      className={
-        isSaved
-          ? 'text-red-500 hover:text-red-700 cursor-pointer'
-          : 'text-gray-500 hover:text-red-700 cursor-pointer'
-      }
-    >
-      <FaHeart />
-    </div>
+    <Tooltip>
+      <TooltipTrigger>
+        <div
+          onClick={() => {
+            {
+              savedTrip(tripId);
+            }
+          }}
+          className={
+            isSaved
+              ? 'text-red-500 hover:text-red-700 cursor-pointer'
+              : 'text-gray-500 hover:text-red-700 cursor-pointer'
+          }
+        >
+          <FaHeart />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>收藏行程</TooltipContent>
+    </Tooltip>
   );
 };
 

@@ -1,5 +1,6 @@
 import { FaCopy } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 const CopyTrip = ({ TRIP_API_URL }) => {
   const copyTrip = async () => {
@@ -23,9 +24,17 @@ const CopyTrip = ({ TRIP_API_URL }) => {
   };
 
   return (
-    <div onClick={copyTrip} className="hover:text-yellow-700 cursor-pointer">
-      <FaCopy />
-    </div>
+    <Tooltip>
+      <TooltipTrigger>
+        <div
+          onClick={copyTrip}
+          className="hover:text-yellow-700 cursor-pointer"
+        >
+          <FaCopy />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>複製一份行程</TooltipContent>
+    </Tooltip>
   );
 };
 
