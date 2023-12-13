@@ -1,12 +1,13 @@
-  CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    photo VARCHAR(255) NOT NULL,
-    provider_name VARCHAR(255) NOT NULL,
-    token VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-  );
+CREATE DATABASE trippin;
+CREATE TABLE users (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  photo VARCHAR(255) NOT NULL,
+  provider_name VARCHAR(255) NOT NULL,
+  token VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
 CREATE TABLE trips (
   id BIGSERIAL PRIMARY KEY,
@@ -23,6 +24,8 @@ CREATE TABLE trips (
   created_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
+
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE TABLE attendees (
   trip_id BIGINT NOT NULL,
@@ -57,7 +60,7 @@ CREATE TABLE places (
 CREATE TABLE saved_trips (
   user_id BIGINT NOT NULL,
   trip_id BIGINT NOT NULL,
-  save_date DATE NOT NULL,
+  save_date DATE NOT NULL default NOW(),
   PRIMARY KEY (user_id, trip_id),
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE

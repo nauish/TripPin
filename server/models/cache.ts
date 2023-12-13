@@ -1,10 +1,15 @@
+import { config } from 'dotenv';
 import { Redis } from 'ioredis';
+
+config();
 
 let redis: Redis | null = null;
 
 export function initCache(): Redis {
   redis = new Redis({
-    port: Number(process.env.REDIS_PORT),
+    tls: {
+      rejectUnauthorized: false,
+    },
     host: process.env.REDIS_HOST,
     password: process.env.REDIS_PASSWORD,
   });

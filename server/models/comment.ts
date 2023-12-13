@@ -19,7 +19,7 @@ export async function selectCommentsByTripId(tripId: number) {
           tc.id AS id, 
           tc.user_id AS user_id, 
           u.name AS username,
-          u.photo,
+          u.photo AS user_photo,
           tc.comment,
           tc.rating,
           tc.created_at,
