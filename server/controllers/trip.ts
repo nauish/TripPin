@@ -3,6 +3,7 @@ import {
   insertAttendee,
   insertTrip,
   selectAttendeesByTripId,
+  selectLatestPublicTrips,
   selectSavedTripsByUserId,
   selectTripById,
   selectTripsByUserId,
@@ -227,6 +228,26 @@ export async function getTripsAttendedByUser(req: Request, res: Response) {
     const { userId } = req.params;
     const data = await selectTripsAttendedByUser(+userId);
     return res.status(200).json({ data });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function getLatestTrips(req: Request, res: Response) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const data = await selectLatestPublicTrips(page);
+
+    const nextPage = data.length > 6 ? page + 1 : undefined;
+    const trips = data.slice(0, 6);
+
+    return res.status(200).json({ data: trips, nextPage });
   } catch (error) {
     if (error instanceof ValidationError) {
       return res.status(400).json({ error: error.message });

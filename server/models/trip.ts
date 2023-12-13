@@ -100,6 +100,7 @@ export async function selectCompleteTripInfo(id: number) {
             'type', pd.type,
             'note', pd.note,
             'dnd_order', pd.dnd_order,
+            'budget', pd.budget,
             'marker_type', pd.marker_type,
             'start_hour', pd.start_hour,
             'end_hour', pd.end_hour,
@@ -119,8 +120,6 @@ export async function selectCompleteTripInfo(id: number) {
   );
 
   const [trip] = results.rows;
-  console.log(trip);
-
   return trip.json_build_object as Trip;
 }
 
@@ -250,4 +249,36 @@ export async function selectPrivacyByTripId(tripId: number) {
   );
   const [trip] = results.rows;
   return trip.privacy_setting;
+}
+
+export async function selectLatestPublicTrips(page: number) {
+  const limit = 6;
+  const offset = (page - 1) * limit;
+
+  const results = await pool.query(
+    `
+    SELECT
+          t.id,
+          t.name,
+          t.destination,
+          t.start_date,
+          t.end_date,
+          t.budget,
+          t.type,
+          t.privacy_setting,
+          t.note,
+          t.photo,
+          u.name AS user_name,
+          u.photo AS user_photo
+    FROM trips t
+    INNER JOIN users u
+    ON t.user_id = u.id
+    WHERE t.privacy_setting = $1
+    ORDER BY t.id DESC
+    LIMIT $2 OFFSET $3
+  `,
+    [PRIVACY_SETTING.PUBLIC, limit + 1, offset],
+  );
+
+  return results.rows;
 }
