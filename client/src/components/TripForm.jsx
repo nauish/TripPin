@@ -9,8 +9,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import { Label } from './ui/label';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 
 const TripForm = ({ className }) => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     destination: '',
@@ -22,29 +27,29 @@ const TripForm = ({ className }) => {
     photo: '',
     note: '',
   });
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log(e.target);
+
     setFormData({
       ...formData,
       [name]: value,
     });
+    setErrors((prev) => ({ ...prev, [name]: null }));
   };
 
   const handleImageSearch = async (e) => {
     e.preventDefault();
-    if (!searchQuery) {
-      toast('請輸入搜尋關鍵字！');
+    if (!formData.destination) {
+      toast.warning('請輸入搜尋關鍵字！');
       return;
     }
 
     const accessKey = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
-    const apiUrl = `https://api.unsplash.com/search/photos?query=${searchQuery}&client_id=${accessKey}`;
+    const apiUrl = `https://api.unsplash.com/search/photos?query=${formData.destination}&client_id=${accessKey}`;
 
     try {
       const response = await fetch(apiUrl);
@@ -62,11 +67,23 @@ const TripForm = ({ className }) => {
 
   const handleImageSelect = (e, imageUrl) => {
     e.preventDefault();
-    console.log(imageUrl);
     setFormData({
       ...formData,
       photo: imageUrl,
     });
+    setSelectedImage(imageUrl);
+  };
+
+  const validation = () => {
+    let tempErrors = {};
+    if (!formData.name.trim()) {
+      tempErrors.name = '請填寫行程名稱！';
+    }
+    if (!formData.destination.trim()) {
+      tempErrors.destination = '請填寫旅遊地點！';
+    }
+    setErrors(tempErrors);
+    return Object.keys(tempErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
@@ -102,203 +119,197 @@ const TripForm = ({ className }) => {
     console.log('Form data submitted:', formData);
   };
 
+  const handleNextStep = (e) => {
+    e.preventDefault();
+    if (currentStep === 1 && validation()) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevStep = (e) => {
+    e.preventDefault();
+    if (currentStep === 2) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   return (
-    <>
-      <div className="pt-4 px-10 font-bold text-3xl">新增行程</div>
+    <div className="flex flex-col justify-center min-h-[94vh]">
+      <div className="pt-4 text-center font-bold text-3xl">新增行程</div>
       <div className="flex justify-center gap-10 px-10">
         <form
           onSubmit={handleSubmit}
-          className={cn(
-            'min-w-[400px] max-w-md mt-4 p-6 bg-white rounded-md shadow-md',
-            className,
-          )}
+          className={cn('min-w-[400px] max-w-md mt-4 p-6', className)}
         >
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="name"
-            >
-              行程名稱
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="text"
-              name="name"
-              required
-              value={formData.name}
-              onChange={handleChange}
-            />
-          </div>
+          {currentStep === 1 && (
+            <>
+              <div>
+                <Label htmlFor="name">行程名稱</Label>
+                <Input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder="e.g. 歡樂美國遊"
+                  value={formData.name}
+                  onChange={handleChange}
+                />
+                {errors.name && <p className="text-red-700">{errors.name}</p>}
+              </div>
 
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="destination"
-            >
-              旅遊地點 (城市、國家)
-            </label>
-            <input
-              id="destination"
-              name="destination"
-              value={formData.destination}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="photo"
-            >
-              選擇圖片
-            </label>
-            <div className="flex">
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                placeholder="搜尋圖片"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button
-                className="ml-2 bg-blue-500 text-white font-bold py-2 px-2 rounded focus:outline-none focus:shadow-outline"
-                type="button"
-                onClick={handleImageSearch}
-              >
-                搜尋
-              </button>
-            </div>
-            <div className="flex flex-wrap mt-2">
-              {searchResults.map((result) => (
-                <div key={result.id} className="relative m-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <div>
-                          <img
-                            src={result.urls.thumb}
-                            alt={result.alt_description}
-                            className="w-16 h-16 object-cover cursor-pointer border border-transparent hover:border-blue-500"
-                            onClick={(e) => {
-                              handleImageSelect(e, result.urls.small);
-                            }}
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <img
-                          src={result.urls.regular}
-                          alt={result.alt_description}
-                          className="w-52 h-52 object-cover cursor-pointer border border-transparent hover:border-blue-500"
-                          onClick={(e) => {
-                            handleImageSelect(e, result.urls.small);
-                          }}
-                        />
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+              <div className="mb-4">
+                <Label htmlFor="destination">旅遊地點 (城市、國家)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="destination"
+                    name="destination"
+                    placeholder="e.g. 美國、紐約"
+                    value={formData.destination}
+                    onChange={handleChange}
+                  />
+                  <Button type="button" onClick={handleImageSearch}>
+                    搜尋封面
+                  </Button>
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="startDate"
-            >
-              開始時間
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="date"
-              name="startDate"
-              value={formData.startDate}
-              onChange={handleChange}
-            />
-          </div>
+                {errors.destination && (
+                  <p className="text-red-700">{errors.destination}</p>
+                )}
+                <div className="flex flex-wrap mt-2">
+                  {searchResults.map((result) => (
+                    <div key={result.id} className="relative m-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div>
+                              <img
+                                src={result.urls.thumb}
+                                alt={result.alt_description}
+                                className={`w-16 h-16 object-cover cursor-pointer border-4 ${
+                                  result.urls.regular === selectedImage
+                                    ? 'animate-bounce border-blue-500'
+                                    : 'border-transparent'
+                                } hover:border-blue-500`}
+                                onClick={(e) => {
+                                  handleImageSelect(e, result.urls.regular);
+                                }}
+                              />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <img
+                              src={result.urls.small}
+                              alt={result.alt_description}
+                              className="w-52 h-52 object-cover cursor-pointer border border-transparent hover:border-blue-500"
+                              onClick={(e) => {
+                                handleImageSelect(e, result.urls.regular);
+                              }}
+                            />
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mb-4">
+                <div className="flex gap-2">
+                  <div className="w-full">
+                    <Label htmlFor="startDate">開始日</Label>
+                    <Input
+                      type="date"
+                      name="startDate"
+                      value={formData.startDate}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="w-full">
+                    <Label htmlFor="endDate">結束日</Label>
+                    <Input
+                      type="date"
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+              </div>
+              <Button type="button" onClick={handleNextStep} className="w-full">
+                下一步
+              </Button>
+            </>
+          )}
 
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="endDate"
-            >
-              結束時間
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-              />
-            </label>
-          </div>
+          {currentStep === 2 && (
+            <>
+              <div
+                className={`transition-all duration-500 ease-in-out transform ${
+                  currentStep === 2 ? 'translate-x-0' : 'translate-x-full'
+                }`}
+              >
+                <Label htmlFor="budget">預算</Label>
+                <Input
+                  type="number"
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="type">旅行類別</Label>
+                <Input
+                  type="text"
+                  name="type"
+                  placeholder="e.g. 自助旅行"
+                  value={formData.type}
+                  onChange={handleChange}
+                />
+              </div>
 
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="budget"
-            >
-              預算
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                name="budget"
-                value={formData.budget}
-                onChange={handleChange}
-              />
-            </label>
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="type"
-            >
-              旅行類別
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-              />
-            </label>
-          </div>
-
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="privacySetting"
-            >
-              隱私設定
-            </label>
-            <select
-              className="block appearance-none w-full border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              name="privacySetting"
-              value={formData.privacySetting}
-              onChange={handleChange}
-            >
-              <option value="public">公開</option>
-              <option value="private">不公開</option>
-            </select>
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="note"
-            >
-              備註
-            </label>
-            <textarea
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              name="note"
-              value={formData.note}
-              onChange={handleChange}
-            />
-          </div>
-          <Button type="submit">新建行程</Button>
+              <div className="mb-4">
+                <Label htmlFor="privacySetting">隱私設定</Label>
+                <select
+                  className="block appearance-none w-full border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  name="privacySetting"
+                  value={formData.privacySetting}
+                  onChange={handleChange}
+                >
+                  <option value="public">公開（他人可以檢視）</option>
+                  <option value="private">
+                    不公開（僅有受邀者可以檢視或編輯）
+                  </option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <Label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="note"
+                >
+                  備註
+                </Label>
+                <Textarea
+                  name="note"
+                  placeholder="e.g. 這次旅行我們要..."
+                  value={formData.note}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="w-1/2"
+                  variant="secondary"
+                >
+                  上一步
+                </Button>
+                <Button type="submit" className="w-1/2">
+                  新建行程
+                </Button>
+              </div>
+            </>
+          )}
         </form>
       </div>
-    </>
+    </div>
   );
 };
 
