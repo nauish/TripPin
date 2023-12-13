@@ -47,7 +47,7 @@ router
 router
   .route('/v1/trips/:tripId/attendees/')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTripAttendees])
-  .post([authenticateJWT, checkTripAttendeesOptional, addUserToTrip])
+  .post([authenticateJWT, checkTripAttendees, addUserToTrip])
   .put([authenticateJWT, checkTripAttendees, putAttendee])
   .delete([authenticateJWT, checkTripAttendees, deleteUserFromTrip]);
 router

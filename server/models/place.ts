@@ -111,7 +111,7 @@ export async function updatePlace(
     WHERE id = $7
     RETURNING id
   `,
-    [day_number, note, tag, start_hour, end_hour, budget, placeId],
+    [day_number, tag, note, start_hour, end_hour, budget, placeId],
   );
   const result = results.rows[0];
   if (result) return result;
