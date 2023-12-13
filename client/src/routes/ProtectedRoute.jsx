@@ -10,7 +10,7 @@ export default function ProtectedRoute() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { accessToken } = localStorage;
+    const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
       navigate('/auth');
       return;
@@ -18,6 +18,7 @@ export default function ProtectedRoute() {
 
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/users/profile`, {
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
     })
