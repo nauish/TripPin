@@ -5,6 +5,7 @@ import { FaHeart } from 'react-icons/fa6';
 const SaveTrip = ({ tripId, Authorization, user }) => {
   const [isSaved, setIsSaved] = useState(false);
   useEffect(() => {
+    if (!user) return;
     fetch(
       `${import.meta.env.VITE_BACKEND_HOST}api/v1/users/${user.id}/trips/saved`,
       {

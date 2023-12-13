@@ -211,18 +211,18 @@ const Comment = () => {
                   {formatDate(comment.created_at)}
                 </span>
               </div>
-              {comment.photos &&
-                comment.photos.map((photo, index) =>
-                  photo ? (
+              {comment.photos && (
+                <div className="flex space-x-1">
+                  {comment.photos.map((photo, index) => (
                     <img
                       key={index}
-                      className="w-1/4 h-1/4"
-                      src={`${
-                        import.meta.env.VITE_BACKEND_HOST
-                      }uploads/${photo}`}
+                      src={photo}
+                      alt=""
+                      className="w-24 h-24 object-cover rounded-lg"
                     />
-                  ) : null,
-                )}
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

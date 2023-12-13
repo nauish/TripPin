@@ -41,7 +41,7 @@ const Auth = () => {
         navigate(-1);
       }
     } catch (error) {
-      toast.error('錯誤：', error);
+      console.log(error);
     }
   };
 
