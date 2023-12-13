@@ -550,7 +550,7 @@ const PlacesMaps = () => {
       sizes={[40, 60]}
       expandToMin={true}
     >
-      <div className="overflow-auto h-[94vh]">
+      <div className="overflow-auto" style={{ height: 'calc(100vh - 64px)' }}>
         <div className="flex flex-col">
           {trip && (
             <div>
