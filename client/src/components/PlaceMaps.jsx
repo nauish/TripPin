@@ -23,6 +23,10 @@ import {
 } from '@/components/ui/accordion';
 import CopyTrip from './CopyTrip';
 import PlaceItem from './PlaceItem';
+import { Player } from '@lottiefiles/react-lottie-player';
+import { TooltipProvider } from './ui/tooltip';
+import ShareTrip from './ShareTrip';
+// import Checklist from './Checklist';
 
 const reorder = (list, startIndex, end) => {
   const result = Array.from(list);
@@ -35,6 +39,7 @@ const reorder = (list, startIndex, end) => {
 const PlacesMaps = () => {
   const { MarkerLibrary } = useMapApi();
   const { Marker } = MarkerLibrary;
+  const [spending, setSpending] = useState(0);
   const mapRef = useRef(null);
   const user = JSON.parse(localStorage.getItem('user'));
   const [data, setData] = useState([]);
@@ -47,6 +52,7 @@ const PlacesMaps = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [nearbyResults, setNearbyResults] = useState([]);
   const [lockedPlaces, setLockedPlaces] = useState([]);
+  const [dragging, setDragging] = useState(false);
   const { tripId } = useParams();
   const socket = useSocket();
   const navigate = useNavigate();
@@ -73,7 +79,6 @@ const PlacesMaps = () => {
         return response.json();
       })
       .then((json) => {
-        console.log(json);
         setTrip(json.data[0]);
       })
       .catch((error) => {
@@ -127,8 +132,16 @@ const PlacesMaps = () => {
         return response.json();
       })
       .then((json) => {
+        if (json.error) throw new Error(json.error);
+
+        const maxDayNumber = json.maxDayNumber;
+
+        if (maxDayNumber <= 0) {
+          setData([{ dayNumber: 1, places: [] }]);
+          return;
+        }
+        setSpending(json.spending);
         setData(json.data);
-        console.log(json.data);
         return json.data;
       })
       .catch((error) => {
@@ -303,12 +316,16 @@ const PlacesMaps = () => {
     setData([...data, { dayNumber: maxDay + 1, places: [] }]);
   };
 
-  const onDragEnd = (result) => {
-    const { destination, source, type } = result;
-    if (!destination) return;
+  const onDragUpdate = () => {
+    setDragging(true);
+  };
 
-    if (lockedPlaces.includes(source.droppableId)) {
-      toast('此景點正在被編輯');
+  const onDragEnd = (result) => {
+    setDragging(false);
+    const { destination, source, type, draggableId } = result;
+    if (!destination) return;
+    if (lockedPlaces.includes(draggableId)) {
+      toast.warning('此景點正在被編輯，請稍後再試');
       return;
     }
 
@@ -374,6 +391,7 @@ const PlacesMaps = () => {
         });
         sourceList.places = reorderedList;
         updateItemOrders(sourceList.places);
+        socket.emit('addNewPlaceToTrip', { room: tripId });
       } else {
         // Move the card between lists
         const [movedPlace] = sourceList.places.splice(source.index, 1);
@@ -387,6 +405,7 @@ const PlacesMaps = () => {
 
         sourceList.places.forEach((place, idx) => (place.order = idx));
         destList.places.forEach((place, idx) => (place.order = idx));
+        updateItemOrders(destList.places);
       }
       socket.emit('newEditUnlock', {
         room: tripId,
@@ -417,12 +436,12 @@ const PlacesMaps = () => {
           toast(json.error);
           return;
         }
-        socket.emit('addNewPlaceToTrip', { room: tripId });
       });
   };
 
   const updateData = async (data, placeId) => {
     try {
+      console.log(data);
       const response = await fetch(`${TRIP_API_URL}/places/${placeId}`, {
         method: 'PUT',
         headers: {
@@ -468,25 +487,39 @@ const PlacesMaps = () => {
                 </span>
               </AccordionTrigger>
               <AccordionContent>
-                {day.places.map((place, index) => (
-                  <PlaceItem
-                    place={place}
-                    index={index}
-                    tripId={tripId}
-                    user={user}
-                    attendeeRole={attendeeRole}
-                    setClickLocation={setClickLocation}
-                    key={place.id}
-                    updateData={updateData}
-                    lockedPlace={lockedPlaces}
-                    centerToTheMarker={centerToTheMarker}
-                  />
-                ))}
+                {day.places.length > 0
+                  ? day.places.map((place, index) => (
+                      <PlaceItem
+                        place={place}
+                        index={index}
+                        tripId={tripId}
+                        user={user}
+                        attendeeRole={attendeeRole}
+                        setClickLocation={setClickLocation}
+                        key={place.id}
+                        updateData={updateData}
+                        lockedPlace={lockedPlaces}
+                        centerToTheMarker={centerToTheMarker}
+                      />
+                    ))
+                  : !dragging &&
+                    attendeeRole === 'attendee' && (
+                      <div className="flex flex-col justify-center items-center">
+                        <Player
+                          autoplay
+                          loop
+                          src="https://lottie.host/91a02969-0942-4a3c-b0c1-8c3dd0070544/mSCAYQ8pDk.json"
+                          className="w-1/2 mx-auto"
+                        ></Player>
+                        <h2 className="text-xl font-bold text-gray-800">
+                          請將景點拖到此處
+                        </h2>
+                      </div>
+                    )}
                 {provided.placeholder}
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          {provided.placeholder}
         </ul>
       )}
     </Droppable>
@@ -513,58 +546,75 @@ const PlacesMaps = () => {
       <div className="overflow-auto h-[94vh]">
         <div className="flex flex-col">
           {trip && (
-            <div className="flex flex-col">
-              <img
-                src={trip.photo}
-                className="object-cover w-full h-[300px]"
-              ></img>
-              <Card className="bg-white border-none shadow-xl p-4 mx-16 -mt-32">
-                <CardTitle className="text-3xl">{trip.name}</CardTitle>
-                <p className="text-gray-600 mb-4 italic">{trip.destination}</p>
-                <div className="text-gray-600 mb-4 flex justify-between">
-                  <div className="flex items-center gap-1">
-                    <FaRegCalendarDays />
-                    <span className="font-semibold text-sm">
-                      {formatDate(trip.start_date)}
-                    </span>{' '}
-                    ~{' '}
-                    <span className="font-semibold text-sm">
-                      {formatDate(trip.end_date)}
-                    </span>
+            <div>
+              <div className="flex flex-col">
+                <img
+                  src={trip.photo}
+                  className="object-cover w-full h-[300px]"
+                ></img>
+                <Card className="bg-white border-none shadow-xl p-4 mx-16 -mt-32">
+                  <CardTitle className="text-3xl">{trip.name}</CardTitle>
+                  <p className="text-gray-600 mb-4 italic">
+                    {trip.destination}
+                  </p>
+                  <div className="text-gray-600 mb-4 flex justify-between">
+                    <div className="flex items-center gap-1">
+                      <FaRegCalendarDays />
+                      <span className="font-semibold text-sm">
+                        {formatDate(trip.start_date)}
+                      </span>{' '}
+                      ~{' '}
+                      <span className="font-semibold text-sm">
+                        {formatDate(trip.end_date)}
+                      </span>
+                    </div>
+                    <div className="flex py-2 gap-4">
+                      <TooltipProvider delayDuration={300}>
+                        <SaveTrip
+                          tripId={tripId}
+                          Authorization={Authorization}
+                          user={user}
+                        />
+                        <CopyTrip TRIP_API_URL={TRIP_API_URL} />
+                        <DownloadPDF tripId={tripId} />
+                        <AddAttendees
+                          tripId={tripId}
+                          attendees={attendees}
+                          tripCreator={trip.user_id}
+                          onAttendeeAdd={handleAddAttendee}
+                          onAttendeeRemove={handleRemoveAttendee}
+                        />
+                        <ShareTrip tripId={tripId} />
+                      </TooltipProvider>
+                    </div>
                   </div>
-                  <div className="flex py-2 gap-4">
-                    <SaveTrip
-                      tripId={tripId}
-                      Authorization={Authorization}
-                      user={user}
-                    />
-                    <CopyTrip TRIP_API_URL={TRIP_API_URL} />
-                    <DownloadPDF tripId={tripId} />
-                    <AddAttendees
-                      tripId={tripId}
-                      attendees={attendees}
-                      tripCreator={trip.user_id}
-                      onAttendeeAdd={handleAddAttendee}
-                      onAttendeeRemove={handleRemoveAttendee}
-                    />
+                  <div className="text-sm">
+                    <div className="text-gray-600">
+                      預算：{formatBudget(+trip.budget)}
+                      {spending && spending > 0 && (
+                        <div className="text-gray-600">
+                          總開銷：{formatBudget(spending)}
+                          <span className="mx-1 text-gray-400">-</span>
+                          剩餘：{formatBudget(+trip.budget - spending)}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <p className="text-gray-600 text-xs">
-                  <span>預算：</span>
-                  {formatBudget(+trip.budget)}
-                </p>
-              </Card>
+                </Card>
+              </div>
             </div>
           )}
-          <input
-            id="autocomplete"
-            ref={autocompleteRef}
-            type="text"
-            placeholder="搜尋"
-            className="my-4 mx-16 p-2 border shadow-lg  border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black hover:bg-slate-100"
-          />
+          {attendeeRole === 'attendee' && (
+            <input
+              id="autocomplete"
+              ref={autocompleteRef}
+              type="text"
+              placeholder="搜尋"
+              className="my-4 mx-16 p-2 border shadow-lg  border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black hover:bg-slate-100"
+            />
+          )}
 
-          <DragDropContext onDragEnd={onDragEnd}>
+          <DragDropContext onDragUpdate={onDragUpdate} onDragEnd={onDragEnd}>
             {searchResults.length > 0 && (
               <Droppable droppableId="searchResults" type="card">
                 {(provided) => (
@@ -765,11 +815,13 @@ const PlacesMaps = () => {
               </Droppable>
             )}
             {/* <Checklist user={user} /> */}
+
             <div className="flex justify-between mx-16 mt-10">
               <h2 className="text-3xl font-bold pb-4">目前景點</h2>
             </div>
             <div className="grid">{boards}</div>
           </DragDropContext>
+
           {attendeeRole === 'attendee' && (
             <Button
               className="bg-orange-200 hover:bg-orange-400 text-black mx-16"
@@ -778,20 +830,22 @@ const PlacesMaps = () => {
               新增一天
             </Button>
           )}
+
           <Comment />
         </div>
       </div>
 
-      <div style={{ position: 'relative' }}>
-        {attendeeRole === 'attendee' && (
-          <Button
-            onClick={addMarker}
-            className="absolute top-[10px] left-[180px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
-          >
-            將標記傳給同伴
-          </Button>
-        )}
-
+      <div>
+        <div className="relative">
+          {attendeeRole === 'attendee' && (
+            <Button
+              onClick={addMarker}
+              className="absolute top-[10px] left-[180px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+            >
+              將標記傳給同伴
+            </Button>
+          )}
+        </div>
         <div ref={mapRef} className="h-full" id="map" />
       </div>
     </Split>
