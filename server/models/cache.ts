@@ -6,13 +6,16 @@ config();
 let redis: Redis | null = null;
 
 export function initCache(): Redis {
-  redis = new Redis({
-    tls: {
-      rejectUnauthorized: false,
-    },
+  const redisOptions = {
     host: process.env.REDIS_HOST,
     password: process.env.REDIS_PASSWORD,
-  });
+  };
+
+  if (process.env.NODE_ENV === 'production') {
+    redisOptions.tls = { rejectUnauthorized: false };
+  }
+
+  redis = new Redis(redisOptions);
 
   redis.on('connect', () => {
     console.log('Connected to Redis');
