@@ -48,6 +48,13 @@ export async function getTripPlaces(req: Request, res: Response) {
   try {
     const places = await selectPlacesByTripId(+req.params.tripId);
 
+    const spending = places.reduce((acc, place) => {
+      if (place.budget) {
+        return acc + place.budget;
+      }
+      return acc;
+    }, 0);
+
     const maxDayNumber = Math.max(...places.map((place) => place.day_number));
     const allDays = Array.from({ length: maxDayNumber }, (_, index) => index + 1);
 
@@ -59,7 +66,7 @@ export async function getTripPlaces(req: Request, res: Response) {
       };
     });
 
-    return res.json({ data });
+    return res.json({ maxDayNumber, data, spending });
   } catch (error) {
     if (error instanceof ValidationError) return res.status(401).json({ error: error.message });
     console.error(error);
@@ -81,13 +88,14 @@ export async function putPlace(req: Request, res: Response) {
       data.note,
       data.start_hour,
       data.end_hour,
+      +data.budget,
     );
     return res.json({ data: result });
   } catch (err) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
     }
-    return res.status(500).json({ error: 'Something went wrong' });
+    return res.status(500).json({ error: '出錯了！' });
   }
 }
 
@@ -100,7 +108,7 @@ export async function putPlaces(req: Request, res: Response) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
     }
-    return res.status(500).json({ error: 'Something went wrong' });
+    return res.status(500).json({ error: '出錯了！' });
   }
 }
 
@@ -109,9 +117,9 @@ export async function deletePlaceFromTrip(req: Request, res: Response) {
     const { placeId } = req.params;
     const result = await deletePlace(+placeId);
 
-    if (!result) throw new Error('Delete place failed');
+    if (!result) throw new Error('刪除景點失敗');
 
-    return res.json({ data: { message: 'Successfully Deleted' } });
+    return res.json({ data: { message: '成功刪除' } });
   } catch (err) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
@@ -124,12 +132,12 @@ export async function putPlaceOrder(req: Request, res: Response) {
   try {
     const array = req.body;
     await updatePlaceOrder(array);
-    return res.json({ data: { message: 'Successfully Updated' } });
+    return res.json({ data: { message: '成功更新' } });
   } catch (err) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
     }
-    return res.status(500).json({ error: 'Something went wrong' });
+    return res.status(500).json({ error: '出錯了' });
   }
 }
 
@@ -141,7 +149,7 @@ export async function saveTripByOthers(req: Request, res: Response) {
     if (isSaved) {
       const saved = await insertSavedTrip(userId, +tripId);
       if (!saved) {
-        throw new Error('Save trip failed');
+        throw new Error('儲存景點失敗');
       }
       return res.json({ data: { message: '加到收藏成功' } });
     }
@@ -155,6 +163,6 @@ export async function saveTripByOthers(req: Request, res: Response) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
     }
-    return res.status(500).json({ error: 'Something went wrong' });
+    return res.status(500).json({ error: '出錯了' });
   }
 }
