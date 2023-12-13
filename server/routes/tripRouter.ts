@@ -4,6 +4,7 @@ import {
   addUserToTrip,
   copyTrip,
   createTrip,
+  getLatestTrips,
   getTrip,
   getTripAttendees,
   getTripChat,
@@ -35,6 +36,7 @@ import { deleteUserFromTrip, putAttendee } from '../controllers/user.js';
 const router = Router();
 
 router.route('/v1/trips').post([authenticateJWT, createTrip]);
+router.route('/v1/trips/latest').get([getLatestTrips]);
 router
   .route('/v1/trips/:tripId')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTrip])

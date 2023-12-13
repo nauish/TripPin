@@ -96,6 +96,7 @@ export async function updatePlace(
   note: string,
   start_hour: number,
   end_hour: number,
+  budget: number,
 ) {
   const results = await pool.query(
     `
@@ -105,11 +106,12 @@ export async function updatePlace(
         tag = $2,
         note = $3,
         start_hour = $4,
-        end_hour = $5
-    WHERE id = $6
+        end_hour = $5,
+        budget = $6
+    WHERE id = $7
     RETURNING id
   `,
-    [day_number, note, tag, start_hour, end_hour, placeId],
+    [day_number, note, tag, start_hour, end_hour, budget, placeId],
   );
   const result = results.rows[0];
   if (result) return result;
