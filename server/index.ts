@@ -1,5 +1,4 @@
 import express from 'express';
-import dotenv from 'dotenv';
 import http from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -10,26 +9,20 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { initSocketIO } from './controllers/socketio.js';
 import rateLimiter from './middleware/rateLimiter.js';
 
-dotenv.config();
 const app = express();
 const server = http.createServer(app);
 initSocketIO(server, {
-  cors: {
-    origin: process.env.CLIENT_URL,
-  },
+  cors: { origin: '*' },
 });
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-  }),
-);
+app.use(cors());
 app.use(cookieParser());
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static('./uploads'));
-app.use('./public', express.static('./public'));
+app.use('/', express.static('./public'));
 
 app.use('/api', rateLimiter, [userRouter, tripRouter, authRouter]);
 

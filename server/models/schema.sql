@@ -60,7 +60,7 @@ CREATE TABLE places (
 CREATE TABLE saved_trips (
   user_id BIGINT NOT NULL,
   trip_id BIGINT NOT NULL,
-  save_date DATE NOT NULL,
+  save_date DATE NOT NULL default NOW(),
   PRIMARY KEY (user_id, trip_id),
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE

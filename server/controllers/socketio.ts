@@ -3,7 +3,7 @@ import { insertChat } from '../models/chat.js';
 import { getCacheInstance } from '../models/cache.js';
 
 let io: Server;
-const cache = await getCacheInstance();
+const cache = getCacheInstance();
 
 function socketEvents(socket: Socket) {
   socket.on('newUserInRoom', (payload) => {
@@ -38,11 +38,7 @@ function socketEvents(socket: Socket) {
     const LOCK_EXPIRE_TIME = 60;
 
     try {
-      const isAbleToGetLock = await cache.set(lockKey, '1', 'EX', LOCK_EXPIRE_TIME, 'NX');
-      if (!isAbleToGetLock) {
-        return;
-      }
-      // await cache.set(lockKey, '1', 'EX', LOCK_EXPIRE_TIME);
+      await cache.set(lockKey, '1', 'EX', LOCK_EXPIRE_TIME);
       const lockKeys = (await cache.keys(`editLock:*:${room}:*`)) ?? [];
       const locks = lockKeys.map((key) => key.split(':')[3]);
       io.sockets.to(room).emit('editLocks', { locks: locks ?? [] });

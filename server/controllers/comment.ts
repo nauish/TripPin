@@ -6,7 +6,15 @@ export async function getComments(req: Request, res: Response) {
   try {
     const { tripId } = req.params;
     const comments = await selectCommentsByTripId(+tripId);
-    return res.json({ data: comments });
+    return res.json({
+      data: comments.map((comment: any) => ({
+        ...comment,
+        photos:
+          comment.photos.length > 0 && comment.photos[0]
+            ? comment.photos.map((photo: string) => `${process.env.CLOUDFRONT_DOMAIN}${photo}`)
+            : [],
+      })),
+    });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(500).json({ error: error.message });

@@ -5,25 +5,27 @@ import { config } from 'dotenv';
 import { nanoid } from 'nanoid';
 import path from 'path';
 
-config({ path: './.env' });
+config({ path: '../.env' });
+
+const { BUCKET_NAME, BUCKET_REGION, S3_ACCESS_KEY, S3_SECRET_KEY } = process.env;
 
 const s3 = new S3Client({
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    accessKeyId: S3_ACCESS_KEY || '',
+    secretAccessKey: S3_SECRET_KEY || '',
   },
-  region: process.env.AWS_REGION,
+  region: BUCKET_REGION,
 });
 
 const s3storage = multerS3({
   s3,
-  bucket: process.env.AWS_BUCKET_NAME || '',
+  bucket: BUCKET_NAME || '',
   metadata: (req, file, cb) => {
     cb(null, { fieldName: file.fieldname });
   },
   contentType: multerS3.AUTO_CONTENT_TYPE,
   key: (req, file, cb) => {
-    cb(null, `${nanoid(12)}.${path.extname(file.originalname)}`);
+    cb(null, `trippin/${nanoid(12)}${path.extname(file.originalname)}`);
   },
 });
 

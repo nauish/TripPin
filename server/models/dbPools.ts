@@ -1,7 +1,7 @@
 import pg from 'pg';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
 
-dotenv.config();
+config();
 
 const pool = new pg.Pool({
   host: process.env.POSTGRESQL_HOST,
