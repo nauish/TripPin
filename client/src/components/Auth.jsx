@@ -34,12 +34,16 @@ const Auth = () => {
         ? toast.error(json.error)
         : toast.success('帳號密碼登入成功！');
 
-      const { data } = json;
-      if (data.access_token) {
-        localStorage.setItem('accessToken', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        navigate(-1);
-      }
+      const {
+        data: { access_token, user },
+      } = json;
+      if (!access_token) return;
+
+      localStorage.setItem('accessToken', access_token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setTimeout(() => {
+        navigate(endpoint === 'signup' ? '/' : -1);
+      }, 500);
     } catch (error) {
       console.log(error);
     }

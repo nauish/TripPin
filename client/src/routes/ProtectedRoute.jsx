@@ -23,7 +23,6 @@ export default function ProtectedRoute() {
       },
     })
       .then((response) => {
-        console.log(response);
         if (!response.ok) {
           navigate('/auth');
           return;

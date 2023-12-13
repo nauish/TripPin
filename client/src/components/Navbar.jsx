@@ -13,18 +13,18 @@ export function Navbar() {
           <div className="font-bold">TripPin</div>
         </div>
       </Link>
-      <div className="flex gap-4 font-bold ">
+      <div className="flex gap-10 font-bold ">
         <Link className="hover:text-gray-600" to="/trip/">
-          新增行程
+          建立新行程
         </Link>
         <Link className="hover:text-gray-600" to="/user/trips">
-          我建立的行程
+          建立的行程
         </Link>
         <Link className="hover:text-gray-600" to="user/saved">
           收藏的行程
         </Link>
         <Link className="hover:text-gray-600" to="/user/attended">
-          加入的行程
+          參加的行程
         </Link>
       </div>
       <div className="flex justify-center items-center">

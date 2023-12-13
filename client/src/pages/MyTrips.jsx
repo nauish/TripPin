@@ -23,7 +23,11 @@ const MyTrips = () => {
       .then((data) => setTrips(data.data));
   }, [userId]);
 
-  return <Trips trips={trips} />;
+  return (
+    <div>
+      <Trips trips={trips} showPlayer tripsName="我的行程" />
+    </div>
+  );
 };
 
 export default MyTrips;

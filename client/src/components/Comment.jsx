@@ -62,7 +62,6 @@ const Comment = () => {
         return response.json();
       })
       .then((json) => {
-        console.log(json);
         fetchComments();
       });
   };
@@ -103,7 +102,6 @@ const Comment = () => {
       })
       .then((json) => {
         if (json.data) {
-          console.log(json.data);
           setComments(json.data);
         }
       });
@@ -189,7 +187,7 @@ const Comment = () => {
         </Dialog>
       </div>
 
-      {comments &&
+      {comments && comments.length > 0 ? (
         comments.map((comment, index) => (
           <div key={index} className="flex items-start space-x-2 my-2">
             <Avatar>
@@ -225,7 +223,10 @@ const Comment = () => {
               )}
             </div>
           </div>
-        ))}
+        ))
+      ) : (
+        <p>尚無評論</p>
+      )}
     </Card>
   );
 };

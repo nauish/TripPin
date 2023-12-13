@@ -1,5 +1,6 @@
 import { FaFilePdf } from 'react-icons/fa6';
 import { toast } from 'react-toastify';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const DownloadPDF = ({ tripId }) => {
   const handleDownload = async () => {
@@ -28,11 +29,14 @@ const DownloadPDF = ({ tripId }) => {
   };
 
   return (
-    <div>
-      <button onClick={handleDownload}>
-        <FaFilePdf className="hover:text-red-500" />
-      </button>
-    </div>
+    <Tooltip>
+      <TooltipTrigger>
+        <div onClick={handleDownload}>
+          <FaFilePdf className="hover:text-red-500" />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>下載 PDF</TooltipContent>
+    </Tooltip>
   );
 };
 

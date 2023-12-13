@@ -7,8 +7,8 @@ export function cn(...inputs) {
 
 export const formatDate = (dateString) => {
   if (!dateString) return '尚未定';
-  return new Date(dateString).toLocaleDateString(undefined, {
-    year: 'numeric',
+  return new Date(dateString).toLocaleDateString('zh-TW', {
+    year: '2-digit',
     month: 'numeric',
     day: 'numeric',
   });

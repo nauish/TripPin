@@ -3,15 +3,17 @@ import { useState } from 'react';
 import { BsPersonWalking } from 'react-icons/bs';
 import { FaCarAlt } from 'react-icons/fa';
 import { TbMapSearch } from 'react-icons/tb';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from './ui/dialog';
+import { RiPinDistanceFill } from 'react-icons/ri';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from 'react-toastify';
 import { useSocket } from '@/context/SocketContext';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { Button } from './ui/button';
+import { SiGooglemaps } from 'react-icons/si';
+import { FaRegEdit } from 'react-icons/fa';
+import { RiDeleteBin6Line } from 'react-icons/ri';
 
 const PlaceItem = ({
   tripId,
@@ -54,7 +56,6 @@ const PlaceItem = ({
       ...formData,
       [name]: value,
     });
-    console.log(formData);
   };
 
   const formatDistance = (distance) => {
@@ -86,6 +87,7 @@ const PlaceItem = ({
 
   const formatTime = (time) => {
     return new Date('1970-01-01T' + time + 'Z').toLocaleTimeString([], {
+      timeZone: 'UTC',
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -103,58 +105,63 @@ const PlaceItem = ({
             <div className="flex justify-center">
               <span className="text-md text-gray-600 flex items-center">
                 {calculateSuggestTransportation(place.distance_from_previous)}
-                {' - '}
-                {formatDistance(place.distance_from_previous)}
 
+                <span className="px-2"> | </span>
+                <RiPinDistanceFill />
+                {formatDistance(place.distance_from_previous)}
+                <span className="px-2"> | </span>
                 <a
                   href={`https://www.google.com/maps/dir/${place.previous_place_name}/${place.name}/@${place.latitude},${place.longitude}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="pl-2 text-blue-600 hover:text-blue-800"
+                  className=" text-blue-600 hover:text-blue-800"
                 >
                   <span className="flex items-center">
                     <TbMapSearch />
-                    查看路線
+                    Google Maps
                   </span>
                 </a>
               </span>
             </div>
           )}
-          <div
-            className={`${
-              lockedPlace.includes(place.id) ? 'bg-red-200' : 'bg-gray-100'
-            } rounded-lg p-4 mb-2 cursor-move hover:bg-slate-100 flex justify-between items-center`}
-          >
-            <div>
-              <span className="text-sm text-gray-700">
-                {place.start_hour && formatTime(place.start_hour)}
-                {place.start_hour && place.end_hour && ' - '}
-                {place.end_hour && formatTime(place.end_hour)}
-              </span>
-              <h3 className="text-md font-semibold">{place.name}</h3>
-              <p className="text-gray-600 text-[15px] mb-1">{place.address}</p>
+          <div className=" my-2 group">
+            <div
+              className={`${
+                lockedPlace.includes(place.id) ? 'bg-red-200' : 'bg-gray-100'
+              } rounded-lg group-hover:rounded-t-lg group-hover:rounded-b-none p-4 cursor-move group-hover:bg-slate-100 w-full flex justify-between items-center`}
+            >
+              <div>
+                <span className="text-sm text-gray-700">
+                  {place.start_hour && formatTime(place.start_hour)}
+                  {place.start_hour && place.end_hour && ' - '}
+                  {place.end_hour && formatTime(place.end_hour)}
+                </span>
+                <h3 className="text-md font-semibold">{place.name}</h3>
+                <p className="text-gray-600 text-sm mb-1">{place.address}</p>
+              </div>
             </div>
-          </div>
 
-          {attendeeRole === 'attendee' && (
-            <div>
-              <a
-                className="z-10 cursor-pointer mr-2"
-                onClick={() => {
-                  setClickLocation({
-                    lat: place.latitude,
-                    lng: place.longitude,
-                  });
-                  centerToTheMarker(place.latitude, place.longitude);
-                }}
-              >
-                看地圖
-              </a>
+            {attendeeRole === 'attendee' && (
+              <div className="flex justify-between bg-gray-100 rounded-b-lg opacity-0 group-hover:bg-slate-100 group-hover:opacity-100 transition-opacity duration-200">
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setClickLocation({
+                      lat: place.latitude,
+                      lng: place.longitude,
+                    });
+                    centerToTheMarker(place.latitude, place.longitude);
+                  }}
+                >
+                  <SiGooglemaps />
+                  看地圖
+                </Button>
 
-              <Dialog open={open}>
-                <DialogTrigger asChild>
-                  <span
-                    className="text-blue-500 hover:text-blue-700 mr-2"
+                <Dialog open={open}>
+                  <Button
+                    variant="ghost"
+                    className="text-gray-500 hover:text-gray-700 w-full"
                     onClick={() => {
                       if (lockedPlace.includes(place.id))
                         return toast.warning('協作者正在編輯中');
@@ -166,96 +173,125 @@ const PlaceItem = ({
                       setOpen(true);
                     }}
                   >
+                    <FaRegEdit />
                     編輯
-                  </span>
-                </DialogTrigger>
+                  </Button>
 
-                <DialogContent
-                  onClose={() => {
-                    socket.emit('newEditUnlock', {
-                      room: tripId,
-                      name: user.name,
-                      placeId: place.id,
-                    });
-                    setOpen(false);
+                  <DialogContent
+                    onClose={() => {
+                      socket.emit('newEditUnlock', {
+                        room: tripId,
+                        name: user.name,
+                        placeId: place.id,
+                      });
+                      setOpen(false);
+                    }}
+                  >
+                    <DialogHeader>
+                      <DialogTitle>{place.name}</DialogTitle>
+                    </DialogHeader>
+                    <div>
+                      <Label>標籤</Label>
+                      <Input
+                        type="text"
+                        name="tag"
+                        value={formData.tag || undefined}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <Label>種類</Label>
+                      <Input
+                        type="text"
+                        name="type"
+                        value={formData.type || undefined}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="w-1/2">
+                        <Label>開始時間</Label>
+                        <Input
+                          type="time"
+                          name="start_hour"
+                          value={formData.start_hour || undefined}
+                          onChange={handleChange}
+                        />
+                      </div>
+                      <div className="w-1/2">
+                        <Label>結束時間</Label>
+                        <Input
+                          type="time"
+                          name="end_hour"
+                          value={formData.end_hour || undefined}
+                          onChange={handleChange}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>預算</Label>
+                      <Input
+                        type="number"
+                        name="budget"
+                        value={formData.budget || 0}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <Label>筆記</Label>
+                      <Textarea
+                        name="note"
+                        value={formData.note || undefined}
+                        onChange={handleChange}
+                      ></Textarea>
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        className="bg-green-700 hover:bg-green-500"
+                        onClick={() => {
+                          updateData(formData, place.id);
+                          socket.emit('newEditUnlock', {
+                            room: tripId,
+                            name: user.name,
+                            placeId: place.id,
+                          });
+                          setOpen(false);
+                        }}
+                      >
+                        儲存
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          deletePlace(place.id);
+                          socket.emit('newEditUnlock', {
+                            room: tripId,
+                            name: user.name,
+                            placeId: place.id,
+                          });
+                        }}
+                        variant="destructive"
+                      >
+                        刪除
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Button
+                  onClick={() => {
+                    if (lockedPlace.includes(place.id))
+                      return toast.warning('編輯中');
+                    deletePlace(place.id);
                   }}
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-700 w-full"
                 >
-                  <DialogHeader>
-                    <DialogTitle>{place.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex items-center space-x-2">
-                    <label className="text-gray-600">標籤：</label>
-                    <input
-                      type="text"
-                      name="tag"
-                      className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={formData.tag || undefined}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <label className="text-gray-600">種類：</label>
-                    <input
-                      type="text"
-                      name="type"
-                      className="border border-gray-300 px-2 py-1 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={formData.type || undefined}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="flex items-start space-x-2">
-                    <label className="text-gray-600 mt-2">筆記：</label>
-                    <textarea
-                      type="text"
-                      name="note"
-                      className="border border-gray-300 px-2 py-1 rounded w-full h-32 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={formData.note || undefined}
-                      onChange={handleChange}
-                    ></textarea>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => {
-                        updateData(formData, place.id);
-                        socket.emit('newEditUnlock', {
-                          room: tripId,
-                          name: user.name,
-                          placeId: place.id,
-                        });
-                      }}
-                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    >
-                      儲存
-                    </button>
-                    <button
-                      onClick={() => {
-                        deletePlace(place.id);
-                        socket.emit('newEditUnlock', {
-                          room: tripId,
-                          name: user.name,
-                          placeId: place.id,
-                        });
-                      }}
-                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700"
-                    >
-                      刪除
-                    </button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <button
-                onClick={() => {
-                  if (lockedPlace.includes(place.id))
-                    return toast.warning('編輯中');
-                  deletePlace(place.id);
-                }}
-                className="text-red-500 hover:text-red-700"
-              >
-                刪除
-              </button>
-            </div>
-          )}
+                  <RiDeleteBin6Line />
+                  刪除
+                </Button>
+              </div>
+            )}
+          </div>
         </li>
       )}
     </Draggable>
