@@ -41,16 +41,40 @@ const router = createBrowserRouter(
       />
       <Route element={<ProtectedRoute />}>
         <Route path="/trip" element={<TripForm />} />
-        <Route path="/users/:userId/trips" element={<MyTrips />} />
-        <Route path="/user/trips" element={<MyTrips />} />
-        <Route path="/user/saved" element={<SavedTrips />} />
+        <Route
+          path="/users/:userId/trips"
+          element={
+            <div className="flex flex-col">
+              <AddTrip />
+              <MyTrips />
+            </div>
+          }
+        />
+        <Route
+          path="/user/trips"
+          element={
+            <div className="flex flex-col">
+              <AddTrip />
+              <MyTrips />
+            </div>
+          }
+        />
+        <Route
+          path="/user/saved"
+          element={
+            <div className="flex flex-col">
+              <AddTrip />
+              <SavedTrips />
+            </div>
+          }
+        />
         <Route
           path="/user/attended"
           element={
-            <>
+            <div className="flex flex-col">
               <AddTrip />
               <AttendedTrips />
-            </>
+            </div>
           }
         />
         <Route path="/profile" element={<Profile />} />

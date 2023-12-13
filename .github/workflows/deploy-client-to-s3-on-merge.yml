@@ -37,3 +37,4 @@ jobs:
           invalidation: '/*'
           delete-removed: true
           private: true
+          files-to-include: '.*/*,*/*,**'
