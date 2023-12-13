@@ -19,7 +19,7 @@ const SavedTrips = () => {
       .then((data) => setTrips(data.data));
   }, [user.id]);
 
-  return <Trips trips={trips} />;
+  return <Trips trips={trips} showPlayer tripsName="收藏的行程" />;
 };
 
 export default SavedTrips;

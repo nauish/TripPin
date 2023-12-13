@@ -23,7 +23,7 @@ const AttendedTrips = () => {
       .then((data) => setTrips(data.data));
   }, [userId]);
 
-  return <Trips trips={trips} />;
+  return <Trips trips={trips} showPlayer tripsName="加入的行程" />;
 };
 
 export default AttendedTrips;
