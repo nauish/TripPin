@@ -14,6 +14,7 @@ import { Button } from './ui/button';
 import { SiGooglemaps } from 'react-icons/si';
 import { FaRegEdit } from 'react-icons/fa';
 import { RiDeleteBin6Line } from 'react-icons/ri';
+import { MdOutlinePlace } from 'react-icons/md';
 
 const PlaceItem = ({
   tripId,
@@ -130,14 +131,31 @@ const PlaceItem = ({
                 lockedPlace.includes(place.id) ? 'bg-red-200' : 'bg-gray-100'
               } rounded-lg group-hover:rounded-t-lg group-hover:rounded-b-none p-4 cursor-move group-hover:bg-slate-100 w-full flex justify-between items-center`}
             >
-              <div>
+              <div className="group">
                 <span className="text-sm text-gray-700">
                   {place.start_hour && formatTime(place.start_hour)}
                   {place.start_hour && place.end_hour && ' - '}
                   {place.end_hour && formatTime(place.end_hour)}
                 </span>
-                <h3 className="text-md font-semibold">{place.name}</h3>
-                <p className="text-gray-600 text-sm mb-1">{place.address}</p>
+                <h3 className="text-lg font-semibold flex items-center">
+                  <MdOutlinePlace />
+                  {place.name}
+                </h3>
+                <p className="text-gray-600 text-sm mb-1 ">{place.address}</p>
+                <div className="hidden group-hover:block  transition-transform duration-200">
+                  <p className="text-gray-600 text-sm mb-1 ">
+                    預算: {place.budget}
+                  </p>
+                  <p className="text-gray-600 text-sm mb-1">
+                    類型: {place.type}
+                  </p>
+                  <p className="text-gray-600 text-sm mb-1">
+                    標籤: {place.tag}
+                  </p>
+                  <p className="text-gray-600 text-sm mb-1">
+                    筆記: {place.note}
+                  </p>
+                </div>
               </div>
             </div>
 
