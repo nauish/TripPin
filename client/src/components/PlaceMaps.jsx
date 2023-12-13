@@ -604,15 +604,14 @@ const PlacesMaps = () => {
               </div>
             </div>
           )}
-          {attendeeRole === 'attendee' && (
-            <input
-              id="autocomplete"
-              ref={autocompleteRef}
-              type="text"
-              placeholder="搜尋"
-              className="my-4 mx-16 p-2 border shadow-lg  border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black hover:bg-slate-100"
-            />
-          )}
+
+          <input
+            id="autocomplete"
+            ref={autocompleteRef}
+            type="text"
+            placeholder="搜尋"
+            className="my-4 mx-16 p-2 border shadow-lg  border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black hover:bg-slate-100"
+          />
 
           <DragDropContext onDragUpdate={onDragUpdate} onDragEnd={onDragEnd}>
             {searchResults.length > 0 && (
