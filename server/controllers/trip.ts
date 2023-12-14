@@ -214,6 +214,7 @@ export async function copyTrip(req: Request, res: Response) {
         address: place.address,
       });
     });
+    await insertAttendee(userId, +newTripId);
     return res.status(200).json({ data: { newTripId } });
   } catch (error) {
     if (error instanceof Error) {
