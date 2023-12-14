@@ -18,14 +18,12 @@ const ShareTrip = ({ tripId }) => {
         <DialogContent>
           <CardHeader>
             <CardTitle>分享行程</CardTitle>
-            <CardDescription>
-              此為公開行程，任何人都可以透過連結查看
-            </CardDescription>
+            <CardDescription>請使用此連結分享給朋友</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex space-x-2">
               <Input
-                value={`${import.meta.env.VITE_FRONTEND_HOST}trips/${tripId}`}
+                value={`https://trip.rickli.shop/trips/${tripId}`}
                 readOnly
               />
               <Button
