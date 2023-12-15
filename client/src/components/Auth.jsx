@@ -6,7 +6,7 @@ const Auth = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [currentForm, setCurrentForm] = useState('register');
+  const [currentForm, setCurrentForm] = useState('login');
   const navigate = useNavigate();
 
   const handleFormSubmit = async (e, endpoint) => {
@@ -30,20 +30,20 @@ const Auth = () => {
       );
 
       const json = await response.json();
-      json.error
-        ? toast.error(json.error)
-        : toast.success('帳號密碼登入成功！');
+
+      if (json.error) {
+        return toast.error(json.error);
+      }
+      toast.success('帳號密碼登入成功！');
 
       const {
         data: { access_token, user },
       } = json;
-      if (!access_token) return;
 
       localStorage.setItem('accessToken', access_token);
       localStorage.setItem('user', JSON.stringify(user));
-      setTimeout(() => {
-        navigate(endpoint === 'signup' ? '/' : -1);
-      }, 500);
+
+      navigate(-1);
     } catch (error) {
       console.log(error);
     }
