@@ -12,6 +12,7 @@ import {
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { DatePickerWithRange } from './DatePicker';
 
 const TripForm = ({ className }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -29,6 +30,7 @@ const TripForm = ({ className }) => {
   });
   const [searchResults, setSearchResults] = useState([]);
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -38,7 +40,17 @@ const TripForm = ({ className }) => {
       ...formData,
       [name]: value,
     });
+
     setErrors((prev) => ({ ...prev, [name]: null }));
+  };
+
+  const handleDateChange = (date) => {
+    setFormData({
+      ...formData,
+      startDate: date.from,
+      endDate: date.to,
+    });
+    console.log(date);
   };
 
   const handleImageSearch = async (e) => {
@@ -82,12 +94,14 @@ const TripForm = ({ className }) => {
     if (!formData.destination.trim()) {
       tempErrors.destination = '請填寫旅遊地點！';
     }
+
     setErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips`,
@@ -110,13 +124,14 @@ const TripForm = ({ className }) => {
         return;
       }
 
-      toast('新增成功！');
+      toast.success('新增成功！');
       navigate(`/user/trips`);
       console.log(result);
     } catch (error) {
       console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
     }
-    console.log('Form data submitted:', formData);
   };
 
   const handleNextStep = (e) => {
@@ -134,7 +149,10 @@ const TripForm = ({ className }) => {
   };
 
   return (
-    <div className="flex flex-col justify-center min-h-[94vh]">
+    <div
+      className="flex flex-col justify-center"
+      style={{ height: 'calc(100vh - 64px)' }}
+    >
       <div className="pt-4 text-center font-bold text-3xl">新增行程</div>
       <div className="flex justify-center gap-10 px-10">
         <form
@@ -143,25 +161,30 @@ const TripForm = ({ className }) => {
         >
           {currentStep === 1 && (
             <>
-              <div>
+              <div className="mb-2">
                 <Label htmlFor="name">行程名稱</Label>
                 <Input
                   type="text"
                   name="name"
                   required
+                  maxLength="50"
                   placeholder="e.g. 歡樂美國遊"
                   value={formData.name}
                   onChange={handleChange}
                 />
-                {errors.name && <p className="text-red-700">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-red-600 text-sm font-bold animate-pulse">
+                    {errors.name}
+                  </p>
+                )}
               </div>
-
-              <div className="mb-4">
+              <div>
                 <Label htmlFor="destination">旅遊地點 (城市、國家)</Label>
                 <div className="flex gap-2">
                   <Input
                     id="destination"
                     name="destination"
+                    maxLength="45"
                     placeholder="e.g. 美國、紐約"
                     value={formData.destination}
                     onChange={handleChange}
@@ -171,7 +194,9 @@ const TripForm = ({ className }) => {
                   </Button>
                 </div>
                 {errors.destination && (
-                  <p className="text-red-700">{errors.destination}</p>
+                  <p className="text-red-600 text-sm font-bold animate-pulse">
+                    {errors.destination}
+                  </p>
                 )}
                 <div className="flex flex-wrap mt-2">
                   {searchResults.map((result) => (
@@ -211,26 +236,8 @@ const TripForm = ({ className }) => {
                 </div>
               </div>
               <div className="mb-4">
-                <div className="flex gap-2">
-                  <div className="w-full">
-                    <Label htmlFor="startDate">開始日</Label>
-                    <Input
-                      type="date"
-                      name="startDate"
-                      value={formData.startDate}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="w-full">
-                    <Label htmlFor="endDate">結束日</Label>
-                    <Input
-                      type="date"
-                      name="endDate"
-                      value={formData.endDate}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
+                <Label>期間</Label>
+                <DatePickerWithRange onDateChange={handleDateChange} />
               </div>
               <Button type="button" onClick={handleNextStep} className="w-full">
                 下一步
@@ -258,6 +265,7 @@ const TripForm = ({ className }) => {
                 <Input
                   type="text"
                   name="type"
+                  maxLength="45"
                   placeholder="e.g. 自助旅行"
                   value={formData.type}
                   onChange={handleChange}
@@ -287,6 +295,7 @@ const TripForm = ({ className }) => {
                 </Label>
                 <Textarea
                   name="note"
+                  maxLength="2000"
                   placeholder="e.g. 這次旅行我們要..."
                   value={formData.note}
                   onChange={handleChange}
@@ -301,7 +310,7 @@ const TripForm = ({ className }) => {
                 >
                   上一步
                 </Button>
-                <Button type="submit" className="w-1/2">
+                <Button type="submit" className="w-1/2" disabled={isLoading}>
                   新建行程
                 </Button>
               </div>
