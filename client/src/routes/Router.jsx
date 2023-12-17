@@ -31,6 +31,14 @@ const router = createBrowserRouter(
         }
       />
       <Route
+        path="/trips"
+        element={
+          <>
+            <LatestTrips />
+          </>
+        }
+      />
+      <Route
         path="/trips/:tripId"
         element={
           <>
@@ -63,7 +71,6 @@ const router = createBrowserRouter(
           path="/user/saved"
           element={
             <div className="flex flex-col">
-              <AddTrip />
               <SavedTrips />
             </div>
           }
@@ -72,7 +79,6 @@ const router = createBrowserRouter(
           path="/user/attended"
           element={
             <div className="flex flex-col">
-              <AddTrip />
               <AttendedTrips />
             </div>
           }
