@@ -1,6 +1,5 @@
 import { DialogTrigger } from '@radix-ui/react-dialog';
 import { Dialog, DialogContent } from './ui/dialog';
-import { BsPeopleFill } from 'react-icons/bs';
 import { Button } from './ui/button';
 import { toast } from 'react-toastify';
 import { useState } from 'react';
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { Users2 } from 'lucide-react';
 
 const AddAttendees = ({
   tripId,
@@ -120,8 +120,8 @@ const AddAttendees = ({
     <Tooltip>
       <Dialog>
         <DialogTrigger asChild>
-          <TooltipTrigger>
-            <BsPeopleFill className="hover:text-orange-500" />
+          <TooltipTrigger className="hover:text-blue-500">
+            <Users2 />
           </TooltipTrigger>
         </DialogTrigger>
         <DialogContent>

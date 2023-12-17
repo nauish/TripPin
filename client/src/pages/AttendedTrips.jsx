@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Trips from '@/components/Trips';
 import { useParams } from 'react-router-dom';
+import LatestTrips from './LatestTrips';
 
 const AttendedTrips = () => {
   const { userId } = useParams();
@@ -23,7 +24,12 @@ const AttendedTrips = () => {
       .then((data) => setTrips(data.data));
   }, [userId]);
 
-  return <Trips trips={trips} showPlayer tripsName="加入的行程" />;
+  return (
+    <>
+      <Trips trips={trips} showPlayer tripsName="加入的行程" />
+      {trips.length === 0 && <LatestTrips />}
+    </>
+  );
 };
 
 export default AttendedTrips;

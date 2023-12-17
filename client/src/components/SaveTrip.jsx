@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { FaHeart } from 'react-icons/fa6';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { FolderHeart } from 'lucide-react';
 
 const SaveTrip = ({ tripId, Authorization, user }) => {
   const [isSaved, setIsSaved] = useState(false);
@@ -65,7 +65,7 @@ const SaveTrip = ({ tripId, Authorization, user }) => {
               : 'text-gray-500 hover:text-red-700 cursor-pointer'
           }
         >
-          <FaHeart />
+          <FolderHeart />
         </div>
       </TooltipTrigger>
       <TooltipContent>收藏行程</TooltipContent>

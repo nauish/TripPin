@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Trips from '@/components/Trips';
+import LatestTrips from './LatestTrips';
 
 const SavedTrips = () => {
   const [trips, setTrips] = useState([]);
@@ -19,7 +20,12 @@ const SavedTrips = () => {
       .then((data) => setTrips(data.data));
   }, [user.id]);
 
-  return <Trips trips={trips} showPlayer tripsName="收藏的行程" />;
+  return (
+    <>
+      <Trips trips={trips} showPlayer tripsName="收藏的行程" />
+      {trips.length === 0 && <LatestTrips />}
+    </>
+  );
 };
 
 export default SavedTrips;

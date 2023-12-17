@@ -1,9 +1,5 @@
 import { Draggable } from '@hello-pangea/dnd';
 import { useState } from 'react';
-import { BsPersonWalking } from 'react-icons/bs';
-import { FaCarAlt } from 'react-icons/fa';
-import { TbMapSearch } from 'react-icons/tb';
-import { RiPinDistanceFill } from 'react-icons/ri';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from 'react-toastify';
 import { useSocket } from '@/context/SocketContext';
@@ -11,10 +7,16 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
-import { SiGooglemaps } from 'react-icons/si';
-import { FaRegEdit } from 'react-icons/fa';
-import { RiDeleteBin6Line } from 'react-icons/ri';
-import { MdOutlinePlace } from 'react-icons/md';
+import {
+  Car,
+  FileEdit,
+  Footprints,
+  Map,
+  MapPin,
+  Navigation2,
+  Ruler,
+  Trash2,
+} from 'lucide-react';
 
 const PlaceItem = ({
   tripId,
@@ -47,16 +49,54 @@ const PlaceItem = ({
 
     if (response.status === 200) {
       socket.emit('addNewPlaceToTrip', { room: tripId });
-      toast('景點已刪除');
+      toast.success('景點已刪除');
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (
+      name === 'start_hour' &&
+      formData.end_hour &&
+      value > formData.end_hour
+    ) {
+      toast.warning('開始時間不能晚於結束時間');
+      setFormData({
+        ...formData,
+        [name]: formData.end_hour,
+      });
+      return;
+    }
+
+    if (
+      name === 'end_hour' &&
+      formData.start_hour &&
+      value < formData.start_hour
+    ) {
+      toast.warning('結束時間不能早於開始時間');
+      setFormData({
+        ...formData,
+        [name]: formData.start_hour,
+      });
+
+      return;
+    }
+
     setFormData({
       ...formData,
       [name]: value,
     });
+  };
+
+  const handleSubmit = async () => {
+    updateData(formData, place.id);
+    socket.emit('newEditUnlock', {
+      room: tripId,
+      name: user.name,
+      placeId: place.id,
+    });
+    setOpen(false);
   };
 
   const formatDistance = (distance) => {
@@ -74,13 +114,13 @@ const PlaceItem = ({
     if (distanceInM < 1000)
       return (
         <>
-          <BsPersonWalking />
+          <Footprints />
           {walkingTime}分鐘
         </>
       );
     return (
       <>
-        <FaCarAlt />
+        <Car />
         {drivingTime}分鐘
       </>
     );
@@ -108,7 +148,7 @@ const PlaceItem = ({
                 {calculateSuggestTransportation(place.distance_from_previous)}
 
                 <span className="px-2"> | </span>
-                <RiPinDistanceFill />
+                <Ruler />
                 {formatDistance(place.distance_from_previous)}
                 <span className="px-2"> | </span>
                 <a
@@ -118,7 +158,7 @@ const PlaceItem = ({
                   className=" text-blue-600 hover:text-blue-800"
                 >
                   <span className="flex items-center">
-                    <TbMapSearch />
+                    <Map />
                     Google Maps
                   </span>
                 </a>
@@ -138,7 +178,7 @@ const PlaceItem = ({
                   {place.end_hour && formatTime(place.end_hour)}
                 </span>
                 <h3 className="text-lg font-semibold flex items-center">
-                  <MdOutlinePlace />
+                  <MapPin />
                   {place.name}
                 </h3>
                 <p className="text-gray-600 text-sm mb-1 ">{place.address}</p>
@@ -172,11 +212,11 @@ const PlaceItem = ({
                     centerToTheMarker(place.latitude, place.longitude);
                   }}
                 >
-                  <SiGooglemaps />
+                  <Navigation2 />
                   看地圖
                 </Button>
 
-                <Dialog open={open}>
+                <Dialog open={open} onOpenChange={setOpen}>
                   <Button
                     variant="ghost"
                     className="text-gray-500 hover:text-gray-700 w-full"
@@ -191,7 +231,7 @@ const PlaceItem = ({
                       setOpen(true);
                     }}
                   >
-                    <FaRegEdit />
+                    <FileEdit />
                     編輯
                   </Button>
 
@@ -268,13 +308,7 @@ const PlaceItem = ({
                       <Button
                         className="bg-green-700 hover:bg-green-500"
                         onClick={() => {
-                          updateData(formData, place.id);
-                          socket.emit('newEditUnlock', {
-                            room: tripId,
-                            name: user.name,
-                            placeId: place.id,
-                          });
-                          setOpen(false);
+                          handleSubmit();
                         }}
                       >
                         儲存
@@ -304,7 +338,7 @@ const PlaceItem = ({
                   variant="ghost"
                   className="text-red-500 hover:text-red-700 w-full"
                 >
-                  <RiDeleteBin6Line />
+                  <Trash2 />
                   刪除
                 </Button>
               </div>

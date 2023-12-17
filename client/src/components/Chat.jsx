@@ -2,15 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { Card } from '@/components/ui/card';
-import {
-  IoMdSend,
-  IoIosChatboxes,
-  IoMdCloseCircleOutline,
-} from 'react-icons/io';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
+import { MessageCircle, Send, X } from 'lucide-react';
 
 const Chat = () => {
   const [isChatWindowOpen, setIsChatWindowOpen] = useState(false);
@@ -125,14 +121,14 @@ const Chat = () => {
                         bottom-5 right-14 z-10 max-w-md px-4 bg-white 
                         h-14 w-14 rounded-full cursor-pointer"
         >
-          <IoIosChatboxes className="text-3xl" />
+          <MessageCircle />
         </div>
       )}
 
       {isChatWindowOpen && (
         <Card className="fixed bottom-5 right-14 z-10 max-w-sm rounded-xl">
           <div className="text-white bg-white flex justify-end items-center pr-4 rounded-t-md py-2 text-lg">
-            <IoMdCloseCircleOutline
+            <X
               onClick={handleChatButtonClick}
               className="cursor-pointer text-black"
             />
@@ -187,7 +183,7 @@ const Chat = () => {
                 onClick={sendMessage}
                 disabled={messageInput.trim() === ''}
               >
-                <IoMdSend />
+                <Send />
               </Button>
             </div>
           </div>
