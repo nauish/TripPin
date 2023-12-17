@@ -1,8 +1,8 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { CgProfile } from 'react-icons/cg';
 import Loading from './Loading';
 import { Button } from './ui/button';
 import { toast } from 'react-toastify';
+import { UserCircle } from 'lucide-react';
 
 const SignOutButton = () => {
   const navigate = useNavigate();
@@ -23,7 +23,10 @@ const Profile = () => {
 
   return (
     <>
-      <div className="bg-white p-4 max-w-md flex flex-col mx-auto justify-center items-center h-[94vh]">
+      <div
+        className="bg-white p-4 max-w-md flex flex-col mx-auto justify-center items-center "
+        style={{ height: 'calc(100vh - 64px)' }}
+      >
         {profileData && profileData.picture ? (
           <img
             src={profileData.picture}
@@ -31,7 +34,7 @@ const Profile = () => {
             className="w-20 h-20 rounded-full object-cover mb-2"
           />
         ) : (
-          <CgProfile className="w-20 h-20 mb-2" />
+          <UserCircle size={200} />
         )}
         <h1 className="text-xl font-semibold mb-4">用戶資料</h1>
         <p className="mb-2">使用者名稱: {profileData.name}</p>
