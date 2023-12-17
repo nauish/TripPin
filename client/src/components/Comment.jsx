@@ -1,6 +1,5 @@
 import { useParams } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
-import { IoIosStar } from 'react-icons/io';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
@@ -8,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { toast } from 'react-toastify';
+import { StarIcon } from 'lucide-react';
 
 const StarRating = ({ rating, onClick, className }) => {
   const maxRating = 5;
@@ -15,8 +16,9 @@ const StarRating = ({ rating, onClick, className }) => {
   return (
     <div>
       {[...Array(maxRating)].map((_, index) => (
-        <IoIosStar
+        <StarIcon
           key={index}
+          fill={index < rating ? 'currentColor' : 'none'}
           onClick={() => onClick(index + 1)} // Ratings start from 1
           className={cn(
             `inline-block ${
@@ -40,30 +42,38 @@ const Comment = () => {
   const { tripId } = useParams();
 
   const handleFileChange = (e) => {
-    console.log(e.target.files);
     setFiles(e.target.files);
   };
 
-  const postComment = (formData) => {
-    fetch(
-      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/comments`,
-      {
-        method: 'POST',
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+  const postComment = async (formData) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/comments`,
+        {
+          method: 'POST',
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
         },
-      },
-    )
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(response.statusText);
-        }
-        return response.json();
-      })
-      .then((json) => {
-        fetchComments();
-      });
+      );
+
+      if (!response.ok) {
+        toast.error('請先登入');
+        return;
+      }
+
+      const json = await response.json();
+      if (json.error) {
+        toast.error(json.error);
+        return;
+      }
+
+      toast.success(json.data);
+      fetchComments();
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const handleChange = (e) => setInput(e.target.value);

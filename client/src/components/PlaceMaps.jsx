@@ -1,11 +1,9 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useNavigate, useParams } from 'react-router-dom';
-import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { FaRegCalendarDays } from 'react-icons/fa6';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import { formatDate, formatBudget } from '@/lib/utils';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import useMapApi from '@/hooks/useMapApi';
@@ -13,7 +11,6 @@ import Comment from './Comment';
 import { Card, CardTitle } from './ui/card';
 import AddAttendees from './AddAttendees';
 import DownloadPDF from './DownloadPDF';
-import Split from 'react-split';
 import SaveTrip from './SaveTrip';
 import {
   Accordion,
@@ -26,6 +23,10 @@ import PlaceItem from './PlaceItem';
 import { Player } from '@lottiefiles/react-lottie-player';
 import { TooltipProvider } from './ui/tooltip';
 import ShareTrip from './ShareTrip';
+import { CalendarRange, Search } from 'lucide-react';
+import SplitPane from '@rexxars/react-split-pane';
+import SearchResults from './SearchResults';
+import NearbySearchResults from './NearbySearchResults';
 // import Checklist from './Checklist';
 
 const reorder = (list, startIndex, end) => {
@@ -46,6 +47,7 @@ const PlacesMaps = () => {
   const [trip, setTrip] = useState(null);
   const [map, setMap] = useState(null);
   const [service, setService] = useState(null);
+  const [placeId, setPlaceId] = useState(null);
   const [autocomplete, setAutocomplete] = useState(null);
   const [attendees, setAttendees] = useState([]);
   const [clickLocation, setClickLocation] = useState(null);
@@ -86,9 +88,14 @@ const PlacesMaps = () => {
       });
 
     fetchAttendees();
+
+    // Add click count
+    fetch(`${TRIP_API_URL}/clicks`, {
+      method: 'POST',
+    });
   }, []);
 
-  const fetchAttendees = useCallback(() => {
+  const fetchAttendees = () => {
     // Check if user is attendee
     if (!user) return;
     fetch(`${TRIP_API_URL}/attendees`, {
@@ -116,7 +123,7 @@ const PlacesMaps = () => {
     return () => {
       socket.off('editLocks');
     };
-  }, []);
+  };
 
   const fetchPlaces = () => {
     fetch(`${TRIP_API_URL}/places`, {
@@ -163,7 +170,6 @@ const PlacesMaps = () => {
       const [mapsLib, placesLib] = await Promise.all([
         loader.importLibrary('maps'),
         loader.importLibrary('places'),
-        loader,
       ]);
       const map = await new mapsLib.Map(mapRef.current, {
         center: { lat: 25.085, lng: 121.39 },
@@ -181,7 +187,9 @@ const PlacesMaps = () => {
 
       map.addListener('click', (location) => {
         setClickLocation(location.latLng.toJSON());
+        setPlaceId(location.placeId);
       });
+
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
 
@@ -259,7 +267,7 @@ const PlacesMaps = () => {
   const handleNearbySearch = (map, place) => {
     const request = {
       location: place.geometry.location,
-      radius: '500',
+      radius: '5000',
       types: ['restaurant', 'establishment'],
     };
 
@@ -306,7 +314,7 @@ const PlacesMaps = () => {
     });
 
     if (response.status === 200) {
-      toast('已新增景點');
+      toast.success('已新增景點');
       socket.emit('addNewPlaceToTrip', { room: tripId });
     }
 
@@ -470,68 +478,6 @@ const PlacesMaps = () => {
     }
   };
 
-  const boards = data.map((day) => (
-    <Droppable
-      droppableId={day.dayNumber.toString()}
-      type="card"
-      key={day.dayNumber}
-    >
-      {(provided) => (
-        <ul ref={provided.innerRef} {...provided.droppableProps}>
-          <Accordion
-            type="single"
-            collapsible
-            className="bg-white border-gray-300 px-16"
-            defaultValue={`item-${day.dayNumber}`}
-          >
-            <AccordionItem value={`item-${day.dayNumber}`}>
-              <AccordionTrigger>
-                <h2 className="text-xl font-bold mb-2">
-                  第 {day.dayNumber} 天
-                </h2>
-                <span className="text-gray-600 ml-auto">
-                  {day.places.length} 個地點
-                </span>
-              </AccordionTrigger>
-              <AccordionContent>
-                {day.places.length > 0
-                  ? day.places.map((place, index) => (
-                      <PlaceItem
-                        place={place}
-                        index={index}
-                        tripId={tripId}
-                        user={user}
-                        attendeeRole={attendeeRole}
-                        setClickLocation={setClickLocation}
-                        key={place.id}
-                        updateData={updateData}
-                        lockedPlace={lockedPlaces}
-                        centerToTheMarker={centerToTheMarker}
-                      />
-                    ))
-                  : !dragging &&
-                    attendeeRole === 'attendee' && (
-                      <div className="flex flex-col justify-center items-center">
-                        <Player
-                          autoplay
-                          loop
-                          src="https://lottie.host/91a02969-0942-4a3c-b0c1-8c3dd0070544/mSCAYQ8pDk.json"
-                          className="w-1/2 mx-auto"
-                        ></Player>
-                        <h2 className="text-xl font-bold text-gray-800">
-                          請將景點拖到此處
-                        </h2>
-                      </div>
-                    )}
-                {provided.placeholder}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </ul>
-      )}
-    </Droppable>
-  ));
-
   const handleAddAttendee = () => {
     fetchAttendees();
   };
@@ -543,72 +489,71 @@ const PlacesMaps = () => {
   };
 
   return (
-    <Split
-      className="split"
-      gutterSize={5}
-      minSize={[500, 0]}
-      sizes={[40, 60]}
-      expandToMin={true}
+    <SplitPane
+      className="split pt-16"
+      defaultSize={500}
+      minSize={390}
+      maxSize={-1}
     >
-      <div className="overflow-auto" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="overflow-auto h-full">
         <div className="flex flex-col">
           {trip && (
-            <div>
-              <div className="flex flex-col">
-                <img
-                  src={trip.photo}
-                  className="object-cover w-full h-[300px]"
-                ></img>
-                <Card className="bg-white border-none shadow-xl p-4 mx-16 -mt-32">
-                  <CardTitle className="text-3xl">{trip.name}</CardTitle>
-                  <p className="text-gray-600 mb-4 italic">
-                    {trip.destination}
-                  </p>
-                  <div className="text-gray-600 mb-4 flex justify-between">
-                    <div className="flex items-center gap-1">
-                      <FaRegCalendarDays />
-                      <span className="font-semibold text-sm">
-                        {formatDate(trip.start_date)}
-                      </span>{' '}
-                      ~{' '}
-                      <span className="font-semibold text-sm">
-                        {formatDate(trip.end_date)}
-                      </span>
-                    </div>
-                    <div className="flex py-2 gap-4">
-                      <TooltipProvider delayDuration={300}>
-                        <SaveTrip
-                          tripId={tripId}
-                          Authorization={Authorization}
-                          user={user}
-                        />
-                        <CopyTrip TRIP_API_URL={TRIP_API_URL} />
-                        <DownloadPDF tripId={tripId} />
-                        <AddAttendees
-                          tripId={tripId}
-                          attendees={attendees}
-                          tripCreator={trip.user_id}
-                          onAttendeeAdd={handleAddAttendee}
-                          onAttendeeRemove={handleRemoveAttendee}
-                        />
-                        <ShareTrip tripId={tripId} />
-                      </TooltipProvider>
-                    </div>
+            <div className="flex flex-col">
+              <img
+                src={trip.photo}
+                className="object-cover w-full h-[300px]"
+              ></img>
+              <Card className="bg-white border-none shadow-xl p-4 mx-16 -mt-32">
+                <CardTitle className="text-3xl">{trip.name}</CardTitle>
+                <p className="text-gray-600 mb-4 italic">{trip.destination}</p>
+                <div className="text-gray-600 mb-4 flex justify-between">
+                  <div className="flex items-center gap-1">
+                    <CalendarRange />
+                    <span className="font-semibold text-sm">
+                      {formatDate(trip.start_date)}
+                    </span>{' '}
+                    ~{' '}
+                    <span className="font-semibold text-sm">
+                      {formatDate(trip.end_date)}
+                    </span>
                   </div>
-                  <div className="text-sm">
+                </div>
+                <div className="flex py-2 gap-4">
+                  <TooltipProvider delayDuration={300}>
+                    <SaveTrip
+                      tripId={tripId}
+                      Authorization={Authorization}
+                      user={user}
+                    />
+                    <CopyTrip TRIP_API_URL={TRIP_API_URL} />
+                    <DownloadPDF tripId={tripId} />
+                    <AddAttendees
+                      tripId={tripId}
+                      attendees={attendees}
+                      tripCreator={trip.user_id}
+                      onAttendeeAdd={handleAddAttendee}
+                      onAttendeeRemove={handleRemoveAttendee}
+                    />
+                    <ShareTrip tripId={tripId} />
+                  </TooltipProvider>
+                </div>
+                <div className="text-sm">
+                  <div className="text-gray-600">
+                    預算：{formatBudget(trip.budget)}
+                  </div>
+
+                  {spending > 0 && (
                     <div className="text-gray-600">
-                      預算：{formatBudget(+trip.budget)}
-                      {spending && spending > 0 && (
-                        <div className="text-gray-600">
-                          總開銷：{formatBudget(spending)}
-                          <span className="mx-1 text-gray-400">-</span>
-                          剩餘：{formatBudget(+trip.budget - spending)}
-                        </div>
-                      )}
+                      總開銷：{formatBudget(spending)}
                     </div>
-                  </div>
-                </Card>
-              </div>
+                  )}
+                  {spending > 0 && (
+                    <div className="text-gray-600">
+                      剩餘：{formatBudget(+trip.budget - spending)}
+                    </div>
+                  )}
+                </div>
+              </Card>
             </div>
           )}
 
@@ -621,173 +566,92 @@ const PlacesMaps = () => {
           />
 
           <DragDropContext onDragUpdate={onDragUpdate} onDragEnd={onDragEnd}>
-            {searchResults.length > 0 && (
-              <Droppable droppableId="searchResults" type="card">
-                {(provided) => (
-                  <div>
-                    <div className="flex justify-between mx-16">
-                      <h2 className="font-bold text-xl">搜尋結果</h2>
-                      <div
-                        className="text-blue-500 hover:text-blue-700 cursor-pointer"
-                        onClick={() => {
-                          setSearchResults([]);
-                        }}
-                      >
-                        清除搜尋結果
-                      </div>
-                    </div>
-                    <ul
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className="list-none p-2"
-                    >
-                      {searchResults.map((result, index) => (
-                        <Draggable
-                          draggableId={result.place_id}
-                          index={index}
-                          key={index}
-                        >
-                          {(provided) => (
-                            <li
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className="bg-white border border-gray-200 mx-14 shadow-xl 
-                            rounded-lg p-2 mb-2 
-                            cursor-move hover:bg-slate-100"
-                              onClick={() => {
-                                setCenter(result.geometry.location);
-                              }}
-                            >
-                              <h3 className="text-lg font-bold">
-                                {index + 1}. {result.name}
-                              </h3>
-                              <p className="text-gray-700">
-                                {result.formatted_address}
-                              </p>
-                              {/* {result.types && (
-                                <p className="text-gray-700">
-                                  類型: {result.types.join(', ')}
-                                </p>
-                              )} */}
-                              {result.url && (
-                                <p className="text-gray-700">
-                                  <a
-                                    href={result.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-blue-500 hover:text-blue-700"
-                                  >
-                                    詳細資訊
-                                  </a>
-                                </p>
-                              )}
-                              <div className="flex gap-2 justify-end">
-                                <Button onClick={() => addPlaceToTrip(result)}>
-                                  新增到行程
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  onClick={() =>
-                                    handleNearbySearch(map, result)
-                                  }
-                                >
-                                  搜尋鄰近景點
-                                </Button>
-                              </div>
-                            </li>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </ul>
-                  </div>
-                )}
-              </Droppable>
-            )}
-
-            {nearbyResults.length > 0 && (
-              <Droppable droppableId="nearbyResults" type="card">
-                {(provided) => (
-                  <div>
-                    <div className="flex justify-between mx-16">
-                      <h2 className="font-bold text-xl">附近地點</h2>
-                      <div
-                        className="text-blue-500 hover:text-blue-700 cursor-pointer"
-                        onClick={() => {
-                          setNearbyResults([]);
-                        }}
-                      >
-                        清除附近地點
-                      </div>
-                    </div>
-                    <ul
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className="min-h-[120px] grid grid-cols-2 gap-x-2 mx-16"
-                    >
-                      {nearbyResults.map((result, index) => (
-                        <Draggable
-                          draggableId={result.place_id}
-                          index={index}
-                          key={index}
-                        >
-                          {(provided) => (
-                            <li
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className="bg-white border border-gray-200 shadow-xl 
-                              rounded-lg p-2 mb-2 
-                              cursor-move hover:bg-slate-100 group"
-                              onClick={() => {
-                                setCenter(result.geometry.location);
-                              }}
-                            >
-                              <h3 className="mark-on-map font-bold text-left">
-                                {result.name}
-                              </h3>
-
-                              {result.price_level && (
-                                <div className="text-gray-700">
-                                  評分：{result.rating}
-                                  <span className="mx-1 text-gray-400">-</span>
-                                  價格：{'$'.repeat(result.price_level)}
-                                </div>
-                              )}
-                              <div className=" justify-between m-2 gap-2 hidden group-hover:flex">
-                                <Button
-                                  className="w-full"
-                                  onClick={() => addPlaceToTrip(result)}
-                                >
-                                  新增
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="w-full"
-                                  onClick={() =>
-                                    handleNearbySearch(map, result)
-                                  }
-                                >
-                                  鄰近
-                                </Button>
-                              </div>
-                            </li>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </ul>
-                  </div>
-                )}
-              </Droppable>
-            )}
+            <SearchResults
+              map={map}
+              searchResults={searchResults}
+              setSearchResults={setSearchResults}
+              setCenter={setCenter}
+              handleNearbySearch={handleNearbySearch}
+              addPlaceToTrip={addPlaceToTrip}
+            />
+            <NearbySearchResults
+              map={map}
+              nearbyResults={nearbyResults}
+              setNearbyResults={setNearbyResults}
+              setCenter={setCenter}
+              handleNearbySearch={handleNearbySearch}
+              addPlaceToTrip={addPlaceToTrip}
+            />
             {/* <Checklist user={user} /> */}
 
             <div className="flex justify-between mx-16 mt-10">
               <h2 className="text-3xl font-bold pb-4">目前景點</h2>
             </div>
-            <div className="grid">{boards}</div>
+            <div className="grid">
+              {data.map((day) => (
+                <Droppable
+                  droppableId={day.dayNumber.toString()}
+                  type="card"
+                  key={day.dayNumber}
+                >
+                  {(provided) => (
+                    <ul ref={provided.innerRef} {...provided.droppableProps}>
+                      <Accordion
+                        type="single"
+                        collapsible
+                        className="bg-white border-gray-300 px-16"
+                        defaultValue={`item-${day.dayNumber}`}
+                      >
+                        <AccordionItem value={`item-${day.dayNumber}`}>
+                          <AccordionTrigger>
+                            <div>
+                              <h2 className="text-xl font-bold mb-2">
+                                第 {day.dayNumber} 天
+                              </h2>
+                              <span className="text-gray-600 ml-auto">
+                                {day.places.length} 個地點
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            {day.places.length > 0
+                              ? day.places.map((place, index) => (
+                                  <PlaceItem
+                                    place={place}
+                                    index={index}
+                                    tripId={tripId}
+                                    user={user}
+                                    attendeeRole={attendeeRole}
+                                    setClickLocation={setClickLocation}
+                                    key={place.id}
+                                    updateData={updateData}
+                                    lockedPlace={lockedPlaces}
+                                    centerToTheMarker={centerToTheMarker}
+                                  />
+                                ))
+                              : !dragging &&
+                                attendeeRole === 'attendee' && (
+                                  <div className="flex flex-col justify-center items-center">
+                                    <Player
+                                      autoplay
+                                      loop
+                                      src="https://lottie.host/91a02969-0942-4a3c-b0c1-8c3dd0070544/mSCAYQ8pDk.json"
+                                      className="w-1/2 mx-auto"
+                                    ></Player>
+                                    <h2 className="text-xl font-bold text-gray-800">
+                                      請將景點拖到此處
+                                    </h2>
+                                  </div>
+                                )}
+                            {provided.placeholder}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </ul>
+                  )}
+                </Droppable>
+              ))}
+            </div>
           </DragDropContext>
 
           {attendeeRole === 'attendee' && (
@@ -803,7 +667,7 @@ const PlacesMaps = () => {
         </div>
       </div>
 
-      <div>
+      <div className="h-full">
         <div className="relative">
           {attendeeRole === 'attendee' && (
             <Button
@@ -814,9 +678,9 @@ const PlacesMaps = () => {
             </Button>
           )}
         </div>
-        <div ref={mapRef} className="h-full" id="map" />
+        <div ref={mapRef} style={{ height: '100vh' }} id="map" />
       </div>
-    </Split>
+    </SplitPane>
   );
 };
 
