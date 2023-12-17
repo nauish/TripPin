@@ -3,8 +3,8 @@ import { Button } from './ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
-import { FaShareAlt } from 'react-icons/fa';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { Link } from 'lucide-react';
 
 const ShareTrip = ({ tripId }) => {
   return (
@@ -12,7 +12,7 @@ const ShareTrip = ({ tripId }) => {
       <Dialog>
         <TooltipTrigger asChild>
           <DialogTrigger>
-            <FaShareAlt />
+            <Link />
           </DialogTrigger>
         </TooltipTrigger>
         <DialogContent>
@@ -30,7 +30,7 @@ const ShareTrip = ({ tripId }) => {
                 className="shrink-0"
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `${import.meta.env.VITE_FRONTEND_HOST}trips/${tripId}`,
+                    `https://trip.rickli.shop/trips/${tripId}`,
                   );
                   toast.success('已複製連結');
                 }}
