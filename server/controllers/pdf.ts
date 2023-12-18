@@ -1,7 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { Request, Response } from 'express';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 import { selectCompleteTripInfo } from '../models/trip.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import { Place, PlacesByDay } from '../types/trip.js';
@@ -16,7 +15,7 @@ export async function generateTripPDF(req: Request, res: Response) {
     }
 
     const doc = new PDFDocument();
-    doc.font(`${dirname(fileURLToPath(import.meta.url))}/NotoSansCJKtc-Regular.otf`);
+    doc.font(`${resolve(process.cwd())}/NotoSansTC-Regular.ttf`);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="trip-${tripData.id}.pdf"`);
