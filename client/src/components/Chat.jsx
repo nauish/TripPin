@@ -3,10 +3,10 @@ import { useParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { MessageCircle, Send, X } from 'lucide-react';
+import { Textarea } from './ui/textarea';
 
 const Chat = () => {
   const [isChatWindowOpen, setIsChatWindowOpen] = useState(false);
@@ -29,7 +29,9 @@ const Chat = () => {
         if (!response.ok) throw response.statusText;
         return response.json();
       })
-      .then((data) => setMessages(data?.data))
+      .then((data) => {
+        setMessages(data?.data);
+      })
       .catch((err) => {
         console.error(err);
         setError(err);
@@ -43,6 +45,12 @@ const Chat = () => {
       socket.off('newChatMessage');
     };
   }, []);
+
+  useEffect(() => {
+    if (isChatWindowOpen) {
+      ref.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [isChatWindowOpen, messages]);
 
   const sendPromptToServerToGPT = async () => {
     try {
@@ -133,11 +141,11 @@ const Chat = () => {
               className="cursor-pointer text-black"
             />
           </div>
-          <div className="pb-2 px-2">
+          <div className="pb-2 px-2 ">
             <ScrollArea className="h-72">
               {messages &&
                 messages.map((message, index) => (
-                  <div key={index} className="flex py-2 pl-2 pr-4">
+                  <div key={index} className="flex py-2 pl-2 pr-4 ">
                     <Avatar
                       className={`mr-1 ${
                         +message.user_id === user.id ? 'ml-auto hidden' : ''
@@ -147,7 +155,7 @@ const Chat = () => {
                       <AvatarFallback>{message.name[0]}</AvatarFallback>
                     </Avatar>
                     <div
-                      className={`flex flex-col gap-2 rounded-lg px-3 py-2 text-sm ${
+                      className={`break-word flex gap-2 rounded-lg px-3 py-2 text-sm ${
                         message.user_id === user.id
                           ? 'ml-auto text-white bg-gray-800'
                           : 'bg-muted'
@@ -159,6 +167,7 @@ const Chat = () => {
                   </div>
                 ))}
             </ScrollArea>
+
             {answer && (
               <div className="flex py-2 pl-2 pr-4">
                 <Avatar className="mr-1">
@@ -171,13 +180,13 @@ const Chat = () => {
             )}
 
             <div className="flex items-center">
-              <Input
+              <Textarea
                 type="text"
                 value={messageInput}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="輸入訊息"
-                className="flex-grow mr-2"
+                placeholder="輸入 /ai 來跟 AI 對話"
+                className="min-h-[40px] mr-2"
               />
               <Button
                 onClick={sendMessage}
