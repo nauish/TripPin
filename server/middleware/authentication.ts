@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { config } from 'dotenv';
 import { z } from 'zod';
 
-config({ path: './.env' });
+config();
 
 const jwtKey: jwt.Secret = process.env.TOKEN_SECRET || '';
 
@@ -13,7 +13,7 @@ const DecodedSchema = z.object({
 
 type Decoded = z.infer<typeof DecodedSchema>;
 
-function verifyJWT(token: string): Promise<Decoded> {
+export function verifyJWT(token: string): Promise<Decoded> {
   return new Promise((resolve, reject) => {
     jwt.verify(token, jwtKey, (err, decoded) => {
       try {
@@ -21,7 +21,7 @@ function verifyJWT(token: string): Promise<Decoded> {
         const result = DecodedSchema.parse(decoded);
         resolve(result);
       } catch (error) {
-        reject(new Error('Invalid decoded value'));
+        reject(new Error('無效的解碼數值'));
       }
     });
   });
@@ -30,9 +30,9 @@ function verifyJWT(token: string): Promise<Decoded> {
 export default async function authenticateJWT(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '') || req.cookies.jwt;
+    const token = authHeader?.replace('Bearer ', '');
 
-    if (!token) return res.status(401).json({ error: 'No token provided' });
+    if (!token) return res.status(401).json({ error: '沒有提供驗證圖章' });
 
     const decoded = await verifyJWT(token);
     res.locals.userId = decoded.userId;
@@ -41,14 +41,14 @@ export default async function authenticateJWT(req: Request, res: Response, next:
     if (err instanceof Error) {
       return res.status(401).json({ error: err.message });
     }
-    return res.status(401).json({ error: 'Authentication failed' });
+    return res.status(401).json({ error: '驗證失敗' });
   }
 }
 
 export async function authenticateJWTOptional(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '') || req.cookies.jwt;
+    const token = authHeader?.replace('Bearer ', '');
 
     if (!token) throw new Error('Not providing a token');
 
@@ -60,6 +60,6 @@ export async function authenticateJWTOptional(req: Request, res: Response, next:
       res.locals.userId = '';
       return next();
     }
-    return res.status(401).json({ error: 'Authentication failed' });
+    return res.status(401).json({ error: '驗證失敗' });
   }
 }
