@@ -1,17 +1,6 @@
-// import { z } from 'zod';
 import PRIVACY_SETTING from '../constants/privacySetting.js';
-import pool from './dbPools.js';
 import { Trip } from '../types/trip.js';
-
-/**
-  CREATE TABLE attendees (
-  id BIGSERIAL PRIMARY KEY,
-  trip_id BIGINT NOT NULL,
-  user_id BIGINT NOT NULL,
-  FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
- */
+import pool from './dbPools.js';
 
 export async function insertTrip(trip: {
   user_id: number;
@@ -112,15 +101,15 @@ export async function selectCompleteTripInfo(id: number) {
         )
       )
     FROM trips t
-    JOIN PlaceDistances pd ON pd.trip_id = t.id
-    JOIN users u ON t.user_id = u.id
+    LEFT JOIN PlaceDistances pd ON pd.trip_id = t.id
+    LEFT JOIN users u ON t.user_id = u.id
     GROUP BY t.id, u.id;
   `,
     [id],
   );
 
   const [trip] = results.rows;
-  return trip.json_build_object as Trip;
+  return (trip?.json_build_object as Trip) || null;
 }
 
 export async function insertAttendee(userId: number, tripId: number, role?: string) {
@@ -280,5 +269,88 @@ export async function selectLatestPublicTrips(page: number) {
     [PRIVACY_SETTING.PUBLIC, limit + 1, offset],
   );
 
+  return results.rows;
+}
+
+export async function selectMostHighlyRatedTrips(page: number) {
+  const limit = 6;
+  const offset = (page - 1) * limit;
+
+  const results = await pool.query(
+    `
+    SELECT
+          t.id,
+          t.name,
+          t.destination,
+          t.start_date,
+          t.end_date,
+          t.budget,
+          t.type,
+          t.privacy_setting,
+          t.note,
+          t.photo,
+          AVG(tc.rating) AS average_rating
+      FROM trips t
+      LEFT JOIN trip_comments tc ON t.id = tc.trip_id
+      WHERE t.privacy_setting = $1
+      GROUP BY t.id
+      ORDER BY average_rating DESC NULLS LAST, t.id DESC
+      LIMIT $2 OFFSET $3
+    `,
+    [PRIVACY_SETTING.PUBLIC, limit + 1, offset],
+  );
+
+  return results.rows;
+}
+
+export async function selectMostClickedTrips(page: number) {
+  const limit = 6;
+  const offset = (page - 1) * limit;
+
+  const results = await pool.query(
+    `
+    SELECT
+          t.id,
+          t.name,
+          t.destination,
+          t.start_date,
+          t.end_date,
+          t.budget,
+          t.type,
+          t.privacy_setting,
+          t.note,
+          t.photo,
+          t.click_count AS clicks
+      FROM trips t
+      WHERE t.privacy_setting = $1
+      ORDER BY clicks DESC, t.id DESC
+      LIMIT $2 OFFSET $3
+    `,
+    [PRIVACY_SETTING.PUBLIC, limit + 1, offset],
+  );
+
+  return results.rows;
+}
+
+export async function updateTripClickCount(tripId: number) {
+  const results = await pool.query(
+    `
+    UPDATE trips
+    SET click_count = click_count + 1
+    WHERE id = $1
+  `,
+    [tripId],
+  );
+  return results.rows;
+}
+
+export async function deleteFromTripsTripId(tripId: number) {
+  const results = await pool.query(
+    `
+    DELETE FROM trips
+    WHERE id = $1
+  `,
+    [tripId],
+  );
   return results.rows;
 }

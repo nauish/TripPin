@@ -4,16 +4,19 @@ import {
   addUserToTrip,
   copyTrip,
   createTrip,
-  getLatestTrips,
+  deleteTrip,
+  getPublicTrips,
   getTrip,
   getTripAttendees,
   getTripChat,
   putTrip,
+  recordClicks,
 } from '../controllers/trip.js';
 import {
   createPlace,
   deletePlaceFromTrip,
   getTripPlaces,
+  optimizingPlaceRoute,
   putPlace,
   putPlaceOrder,
 } from '../controllers/place.js';
@@ -35,12 +38,14 @@ import { deleteUserFromTrip, putAttendee } from '../controllers/user.js';
 
 const router = Router();
 
-router.route('/v1/trips').post([authenticateJWT, createTrip]);
-router.route('/v1/trips/latest').get([getLatestTrips]);
+router.route('/v1/trips').get([getPublicTrips]).post([authenticateJWT, createTrip]);
+
 router
   .route('/v1/trips/:tripId')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTrip])
-  .put([authenticateJWT, checkTripAttendees, putTrip]);
+  .put([authenticateJWT, checkTripAttendees, putTrip])
+  .delete([authenticateJWT, checkTripAttendees, deleteTrip]);
+router.route('/v1/trips/:tripId/clicks').post([recordClicks]);
 router
   .route('/v1/trips/:tripId/pdf')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, generatePDF]);
@@ -57,6 +62,7 @@ router
   .put([authenticateJWT, copyTrip]);
 router
   .route('/v1/trips/:tripId/places/orders')
+  .post([authenticateJWT, checkTripAttendees, optimizingPlaceRoute])
   .put([authenticateJWT, checkTripAttendees, putPlaceOrder]);
 router
   .route('/v1/trips/:tripId/places/:placeId')
@@ -69,7 +75,7 @@ router
 router
   .route('/v1/trips/:tripId/comments')
   .get([getComments])
-  .post([upload.fields([{ name: 'photos', maxCount: 5 }]), postComment]);
+  .post([upload.fields([{ name: 'photos', maxCount: 5 }]), authenticateJWT, postComment]);
 router
   .route('/v1/trips/:tripId/checklists')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getChecklists])
