@@ -6,7 +6,7 @@ config();
 let redis: Redis | null = null;
 
 export function initCache(): Redis {
-  const redisOptions = {
+  const redisOptions: { host: string | undefined; password: string | undefined; tls?: object } = {
     host: process.env.REDIS_HOST,
     password: process.env.REDIS_PASSWORD,
   };

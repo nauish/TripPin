@@ -1,18 +1,25 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { insertChat } from '../models/chat.js';
-import getSocketIOInstance from './socketio.js';
+import getSocketIOInstance from './socket.js';
+import { selectCompleteTripInfo } from '../models/trip.js';
 
 export async function getChatCompletion(req: Request, res: Response) {
+  const { tripId } = req.params;
   const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
 
+  const additionalInformation = await selectCompleteTripInfo(+tripId);
+
   const systemContent = `
     You're a trip planner that
-    help users plan trips efficiently, use concise Taiwanese Chinese. 
-    List out non-repetitive attraction names.
+    help users plan trips efficiently, use Traditional Chinese. 
+    The current trip arrangement user made is as followed: ${JSON.stringify(additionalInformation)}
+    List out other fun and popular attractions.
     `;
+
+  console.log(systemContent);
 
   try {
     const stream = await client.chat.completions.create({
@@ -25,7 +32,7 @@ export async function getChatCompletion(req: Request, res: Response) {
         { role: 'user', content: req.body?.userPrompt || 'Hi' },
       ],
       temperature: 0,
-      max_tokens: 600,
+      max_tokens: 2000,
       n: 1,
       stream: true,
     });

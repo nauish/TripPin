@@ -15,7 +15,7 @@ const rateLimiter = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.ip;
     if (token && (await isQuotaExceeded(token))) {
-      return res.status(429).json({ error: `Quota of ${QUOTA} per ${WINDOW} seconds exceeded` });
+      return res.status(429).json({ error: `每${WINDOW}秒${QUOTA}次的請求到達上限了` });
     }
     return next();
   } catch (err) {

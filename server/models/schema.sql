@@ -17,12 +17,14 @@ CREATE TABLE trips (
   start_date DATE,
   end_date DATE,
   photo VARCHAR(255),
-  budget NUMERIC(10, 2),
+  budget INTEGER,
   type VARCHAR(100),
   privacy_setting VARCHAR(50) NOT NULL,
   note TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
-  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  click_count INTEGER DEFAULT 0,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  CHECK (start_date <= end_date)
 );
 
 CREATE EXTENSION IF NOT EXISTS postgis;
@@ -72,19 +74,19 @@ CREATE TABLE chat_messages (
   user_id BIGINT NOT NULL,
   message TEXT NOT NULL,
   timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-  FOREIGN KEY (user_id) REFERENCES users (id),
-  FOREIGN KEY (trip_id) REFERENCES trips (id)
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
 );
 
 CREATE TABLE trip_comments (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL,
   trip_id BIGINT NOT NULL,
-  comment TEXT NOT NULL,
+  comment TEXT NOT NULL CHECK (CHAR_LENGTH(comment) <= 500),
   rating INTEGER NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
-  FOREIGN KEY (user_id) REFERENCES users (id),
-  FOREIGN KEY (trip_id) REFERENCES trips (id)
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
 );
 
 CREATE TABLE trip_comment_photos (
@@ -98,7 +100,7 @@ CREATE TABLE checklists (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
-  trip_id BIGINT NOT NULL REFERENCES trips(id) 
+  trip_id BIGINT NOT NULL REFERENCES trips(id) ON DELETE CASCADE
 );
 
 CREATE TABLE checklist_items (
@@ -107,5 +109,5 @@ CREATE TABLE checklist_items (
   item_order BIGINT NOT NULL,
   is_checked BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT NOW(),
-  checklist_id INT NOT NULL REFERENCES checklists(id)
+  checklist_id INT NOT NULL REFERENCES checklists(id) ON DELETE CASCADE
 );

@@ -166,3 +166,84 @@ export async function saveTripByOthers(req: Request, res: Response) {
     return res.status(500).json({ error: '出錯了' });
   }
 }
+
+type Place = {
+  id: number;
+  longitude: number;
+  latitude: number;
+};
+
+function calculateDistance(place1: Place, place2: Place) {
+  const dx = place2.longitude - place1.longitude;
+  const dy = place2.latitude - place1.latitude;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+export function optimizeRoute(places: Place[]): Place[] {
+  const unvisitedPlaces = new Set(places);
+  const route: Place[] = [];
+
+  // Start from the first place as the current place
+  let currentPlace = unvisitedPlaces.values().next().value;
+  unvisitedPlaces.delete(currentPlace);
+  route.push(currentPlace);
+
+  const calculateNearestPlaces = (thisPlace: Place) => {
+    let nearestPlace: Place | null = null;
+    let secondNearestPlace: Place | null = null;
+    let shortestDistance = Infinity;
+    let secondShortestDistance = Infinity;
+
+    // Find the nearest place
+    unvisitedPlaces.forEach((unvisitedPlace) => {
+      const distance = calculateDistance(thisPlace, unvisitedPlace);
+
+      if (distance < shortestDistance) {
+        // If the distance is shorter than the shortest distance
+        secondNearestPlace = nearestPlace; // The second nearest place is the nearest place
+        nearestPlace = unvisitedPlace; // Set the nearest place to the current place
+        secondShortestDistance = shortestDistance;
+        shortestDistance = distance;
+      } else if (distance < secondShortestDistance) {
+        secondNearestPlace = unvisitedPlace; // Set the second nearest place to the current place
+        secondShortestDistance = distance;
+      }
+    });
+
+    return { nearestPlace, secondNearestPlace };
+  };
+
+  while (unvisitedPlaces.size > 0) {
+    const { nearestPlace, secondNearestPlace } = calculateNearestPlaces(currentPlace);
+
+    if (nearestPlace) {
+      currentPlace = nearestPlace;
+      unvisitedPlaces.delete(currentPlace);
+      route.push(currentPlace);
+    }
+
+    if (secondNearestPlace) {
+      currentPlace = secondNearestPlace;
+      unvisitedPlaces.delete(currentPlace);
+      route.push(currentPlace);
+    }
+  }
+
+  return route;
+}
+
+export async function optimizingPlaceRoute(req: Request, res: Response) {
+  try {
+    const places = await selectPlacesByTripId(+req.params.tripId);
+    const route = optimizeRoute(places);
+    updatePlaceOrder(route.map((place, index) => ({ id: place.id, order: index })));
+    return res.json({ data: { message: '成功最佳化路線' } });
+  } catch (error) {
+    if (error instanceof ValidationError) return res.status(401).json({ error: error.message });
+    console.error(error);
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}

@@ -4,12 +4,12 @@ export async function insertChecklist(name: string, tripId: number) {
   const results = await pool.query(
     `
     INSERT INTO checklists (name, trip_id)
-    VALUES ($1, $2)
+    VALUES ($1, $2) RETURNING id
   `,
     [name, tripId],
   );
 
-  return results.rows;
+  return results.rows[0].id;
 }
 
 export async function selectChecklistsByTripId(tripId: number) {
@@ -96,7 +96,7 @@ export async function insertChecklistItem(name: string, checklistId: number, ord
   const results = await pool.query(
     `
     INSERT INTO checklist_items (name, checklist_id, item_order)
-    VALUES ($1, $2, $3)
+    VALUES ($1, $2, $3) returning *
   `,
     [name, checklistId, order],
   );
@@ -126,7 +126,7 @@ export async function updateChecklistItem(
     `
     UPDATE checklist_items
     SET name = $1, is_checked = $2
-    WHERE id = $3
+    WHERE id = $3 returning *
     `,
     [name, isChecked, checklistItemId],
   );

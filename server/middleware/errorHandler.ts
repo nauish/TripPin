@@ -8,12 +8,7 @@ export class ValidationError extends Error {
   }
 }
 
-export function errorHandler(
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
   // eslint-disable-next-line no-console
   console.error(err);
   if (err instanceof ValidationError) {
@@ -22,6 +17,6 @@ export function errorHandler(
   if (err instanceof Error) {
     return res.status(500).json({ error: err.message });
   }
-  res.status(500).json({ error: 'Internal Server Error' });
+  res.status(500).json({ error: '內部伺服器出錯' });
   return next();
 }

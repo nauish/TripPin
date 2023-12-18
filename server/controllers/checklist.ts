@@ -95,8 +95,8 @@ export async function getChecklistItems(req: Request, res: Response) {
 export async function putChecklistItem(req: Request, res: Response) {
   try {
     const { itemId } = req.params;
-    const { name, isComplete } = req.body;
-    const result = await updateChecklistItem(name, isComplete, +itemId);
+    const { name, isChecked } = req.body;
+    const result = await updateChecklistItem(name, isChecked, +itemId);
     return res.json({ data: result });
   } catch (error) {
     if (error instanceof Error) {

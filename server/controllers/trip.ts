@@ -1,13 +1,17 @@
 import { Request, Response } from 'express';
 import {
+  deleteFromTripsTripId,
   insertAttendee,
   insertTrip,
   selectAttendeesByTripId,
   selectLatestPublicTrips,
+  selectMostClickedTrips,
+  selectMostHighlyRatedTrips,
   selectSavedTripsByUserId,
   selectTripById,
   selectTripsByUserId,
   updateTrip,
+  updateTripClickCount,
 } from '../models/trip.js';
 import { selectChatByTripId } from '../models/chat.js';
 import { insertPlace, selectPlacesByTripId } from '../models/place.js';
@@ -22,7 +26,12 @@ export async function createTrip(req: Request, res: Response) {
     const { userId } = res.locals;
     const { name, destination, budget, startDate, endDate, privacySetting, type, note, photo } =
       req.body;
-    if (!name || !privacySetting) throw new ValidationError('Missing required fields');
+    if (!name || !privacySetting) throw new ValidationError('缺少必要欄位');
+
+    if (startDate && endDate && startDate > endDate) {
+      throw new ValidationError('結束日期不可早於開始日期');
+    }
+
     await client.query('BEGIN');
     const tripId = await insertTrip({
       user_id: userId,
@@ -44,7 +53,7 @@ export async function createTrip(req: Request, res: Response) {
     if (err instanceof Error) {
       return res.status(400).json({ error: err.message });
     }
-    return res.status(500).json({ error: 'Something went wrong' });
+    return res.status(500).json({ error: '未預期的錯誤' });
   } finally {
     client.release();
   }
@@ -54,7 +63,6 @@ export async function getTrip(req: Request, res: Response) {
   try {
     const { tripId } = req.params;
     const data = await selectTripById(+tripId);
-
     return res.json({ data });
   } catch (error) {
     if (error instanceof Error) {
@@ -149,7 +157,8 @@ export async function getTripChat(req: Request, res: Response) {
 
 export async function putTrip(req: Request, res: Response) {
   const { tripId } = req.params;
-  const { name, destination, budget, startDate, endDate, privacySetting, type, note } = req.body;
+  const { name, destination, budget, startDate, endDate, type, note } = req.body;
+  const privacySetting = req.body.privacy_setting ?? PRIVACY_SETTING.PUBLIC;
 
   if (!name || !privacySetting) {
     throw new ValidationError('Missing required fields');
@@ -167,7 +176,7 @@ export async function putTrip(req: Request, res: Response) {
       privacy_setting: privacySetting,
       note,
     });
-    return res.status(200).json({ data: { message: 'Update trip successfully' } });
+    return res.status(200).json({ data: { message: '更新景點成功' } });
   } catch (error) {
     if (error instanceof ValidationError) {
       return res.status(400).json({ error: error.message });
@@ -215,7 +224,7 @@ export async function copyTrip(req: Request, res: Response) {
       });
     });
     await insertAttendee(userId, +newTripId);
-    return res.status(200).json({ data: { newTripId } });
+    return res.status(200).json({ data: { id: newTripId } });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });
@@ -240,15 +249,59 @@ export async function getTripsAttendedByUser(req: Request, res: Response) {
   }
 }
 
-export async function getLatestTrips(req: Request, res: Response) {
+export async function getPublicTrips(req: Request, res: Response) {
   try {
     const page = Number(req.query.page) || 1;
-    const data = await selectLatestPublicTrips(page);
+    const sort = req.query.sort || 'latest';
 
+    let selectTrips;
+    if (sort === 'latest') {
+      selectTrips = selectLatestPublicTrips;
+    } else if (sort === 'top-rated') {
+      selectTrips = selectMostHighlyRatedTrips;
+    } else if (sort === 'hottest') {
+      selectTrips = selectMostClickedTrips;
+    } else {
+      return res.status(400).json({ error: 'Invalid query' });
+    }
+
+    const data = await selectTrips(page);
     const nextPage = data.length > 6 ? page + 1 : undefined;
     const trips = data.slice(0, 6);
 
     return res.status(200).json({ data: trips, nextPage });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function recordClicks(req: Request, res: Response) {
+  try {
+    const { tripId } = req.params;
+    await updateTripClickCount(+tripId);
+
+    return res.status(200).json({ data: { message: 'Update clicks successfully' } });
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+}
+
+export async function deleteTrip(req: Request, res: Response) {
+  try {
+    await deleteFromTripsTripId(+req.params.tripId);
+    return res.status(200).json({ data: { message: '刪除行程成功' } });
   } catch (error) {
     if (error instanceof ValidationError) {
       return res.status(400).json({ error: error.message });
