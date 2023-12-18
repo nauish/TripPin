@@ -32,27 +32,7 @@ function socketEvents(socket: Socket) {
     socket.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
   });
   socket.on('addNewPlaceToTrip', async (payload) => {
-    const places = await selectPlacesByTripId(payload.room);
-
-    const spending = places.reduce((acc, place) => {
-      if (place.budget) {
-        return acc + place.budget;
-      }
-      return acc;
-    }, 0);
-
-    const maxDayNumber = Math.max(...places.map((place) => place.day_number));
-    const allDays = Array.from({ length: maxDayNumber }, (_, index) => index + 1);
-
-    const data = allDays.map((dayNumber) => {
-      const dayPlaces = places.filter((place) => place.day_number === dayNumber);
-      return {
-        dayNumber,
-        places: dayPlaces,
-      };
-    });
-
-    io.sockets.to(payload.room).emit('addNewPlaceToTrip', { maxDayNumber, data, spending });
+    io.sockets.to(payload.room).emit('addNewPlaceToTrip', true);
   });
 
   socket.on('getRoomLocks', async (payload) => {

@@ -260,14 +260,9 @@ const PlacesMaps = () => {
       setGeometry(geometryLib);
 
       socket.on('addNewPlaceToTrip', (payload) => {
-        const maxDayNumber = payload.maxDayNumber;
-
-        if (maxDayNumber <= 0) {
-          setData([{ dayNumber: 1, places: [] }]);
-          return;
+        if (payload) {
+          fetchPlaces();
         }
-        setData(payload.data);
-        setSpending(payload.spending);
       });
 
       socket.on('getMarker', (data) => {
