@@ -1,5 +1,6 @@
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Button } from './ui/button';
+import { useState } from 'react';
 
 const SearchResults = ({
   searchResults,
@@ -8,7 +9,9 @@ const SearchResults = ({
   addPlaceToTrip,
   handleNearbySearch,
   map,
+  setClickLocation,
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   return (
     searchResults.length > 0 && (
       <Droppable droppableId="searchResults" type="card">
@@ -41,19 +44,45 @@ const SearchResults = ({
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className="bg-white border border-gray-200 shadow-xl 
+                      className="bg-white border border-gray-200 shadow-md 
                             rounded-lg p-4 mb-2 
                             cursor-move hover:bg-slate-100"
                       onClick={() => {
                         setCenter(result.geometry.location);
+                        setClickLocation({
+                          lat: result.geometry.location.lat(),
+                          lng: result.geometry.location.lng(),
+                        });
                       }}
                     >
                       <h3 className="text-lg font-bold">
+                        <img src={result.icon} className="w-6" />
                         {index + 1}. {result.name}
                       </h3>
                       <p className="text-gray-700">
                         {result.formatted_address}
                       </p>
+                      {result.rating && (
+                        <p className="text-gray-700">
+                          評分：{result.rating} / 5.0
+                        </p>
+                      )}
+                      {result.opening_hours && (
+                        <div>
+                          <button onClick={() => setIsOpen(!isOpen)}>
+                            {isOpen ? '隱藏營業時間' : '顯示營業時間'}
+                          </button>
+
+                          {isOpen &&
+                            result.opening_hours.weekday_text.map(
+                              (day, index) => (
+                                <p key={index} className="text-gray-700">
+                                  {day}
+                                </p>
+                              ),
+                            )}
+                        </div>
+                      )}
                       {result.url && (
                         <p className="text-gray-700">
                           <a

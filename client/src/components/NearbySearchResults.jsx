@@ -1,6 +1,8 @@
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Button } from './ui/button';
 
+import { tagIconMapping } from '@/lib/utils';
+
 const NearbySearchResults = ({
   nearbyResults,
   setNearbyResults,
@@ -8,6 +10,8 @@ const NearbySearchResults = ({
   addPlaceToTrip,
   handleNearbySearch,
   map,
+  setClickLocation,
+  size,
 }) => {
   return (
     nearbyResults.length > 0 && (
@@ -28,7 +32,13 @@ const NearbySearchResults = ({
             <ul
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className="min-h-[120px] grid grid-cols-2 gap-x-2 mx-16"
+              className={`min-h-[120px] grid gap-x-2 mx-16 ${
+                size > 1200
+                  ? 'grid-cols-4'
+                  : size > 800
+                  ? 'grid-cols-3'
+                  : 'grid-cols-2'
+              }`}
             >
               {nearbyResults.map((result, index) => (
                 <Draggable
@@ -41,27 +51,38 @@ const NearbySearchResults = ({
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className="bg-white border border-gray-200 shadow-xl 
+                      className="bg-white border border-gray-200 shadow-md flex justify-between flex-col
                       rounded-lg p-2 mb-2 
-                      cursor-move hover:bg-slate-100 group"
+                      cursor-move hover:bg-slate-50 group"
                       onClick={() => {
                         setCenter(result.geometry.location);
+                        setClickLocation({
+                          lat: result.geometry.location.lat(),
+                          lng: result.geometry.location.lng(),
+                        });
                       }}
                     >
-                      <h3 className="mark-on-map font-bold text-left">
-                        {result.name}
-                      </h3>
+                      <div className="flex flex-col justify">
+                        <h3 className="mark-on-map font-bold text-left overflow-hidden text-ellipsis whitespace-nowrap">
+                          {result.types && tagIconMapping[result.types[0]]}
+                          {result.name}
+                        </h3>
 
-                      {result.price_level && (
-                        <div className="text-gray-700">
-                          評分：{result.rating}
-                          <span className="mx-1 text-gray-400">-</span>
-                          價格：{'$'.repeat(result.price_level)}
-                        </div>
-                      )}
-                      <div className=" justify-between m-2 gap-2 hidden group-hover:flex">
+                        {result.price_level && (
+                          <div className="text-gray-700 text-sm">
+                            評分：{result.rating}
+                          </div>
+                        )}
+                        {result.price_level && (
+                          <div className="text-gray-700 text-sm">
+                            {'$'.repeat(result.price_level)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-end">
                         <Button
-                          className="w-full"
+                          className="w-full p-0"
+                          variant="ghost"
                           onClick={() => addPlaceToTrip(result)}
                         >
                           新增
