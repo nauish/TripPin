@@ -121,6 +121,7 @@ export const tagIconMapping = {
   pharmacy: '💊',
   physiotherapist: '👨‍⚕️',
   plumber: '🔧',
+  place_of_interest: '🗺',
   police: '👮',
   post_office: '📮',
   primary_school: '🏫',

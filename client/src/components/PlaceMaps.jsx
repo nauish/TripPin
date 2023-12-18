@@ -568,7 +568,6 @@ const PlacesMaps = () => {
         room: tripId,
         placeId: source.droppableId,
       });
-      setData(newOrderedData);
     }
   };
 
