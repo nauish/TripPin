@@ -146,6 +146,31 @@ const AddAttendees = ({
               </Button>
             </form>
             <hr className="my-4" />
+            <h4 className="text-sm font-bold my-4">複製連結</h4>
+            <div className="flex space-x-2">
+              <Input
+                value={`https://trip.rickli.shop/trips/${tripId}`}
+                readOnly
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `https://trip.rickli.shop/trips/${tripId}`,
+                  );
+                  toast.success('已複製連結');
+                }}
+              />
+              <Button
+                className="shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `https://trip.rickli.shop/trips/${tripId}`,
+                  );
+                  toast.success('已複製連結');
+                }}
+              >
+                複製
+              </Button>
+            </div>
+            <hr className="my-4" />
             <div className="space-y-4">
               <h4 className="text-sm font-bold">目前的參加者</h4>
               <div className="grid gap-6">
