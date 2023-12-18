@@ -22,7 +22,7 @@ import CopyTrip from './CopyTrip';
 import PlaceItem from './PlaceItem';
 import { Player } from '@lottiefiles/react-lottie-player';
 import { TooltipProvider } from './ui/tooltip';
-import { CalendarRange, Map } from 'lucide-react';
+import { CalendarRange, List, Map } from 'lucide-react';
 import SplitPane from '@rexxars/react-split-pane';
 import SearchResults from './SearchResults';
 import NearbySearchResults from './NearbySearchResults';
@@ -625,7 +625,7 @@ const PlacesMaps = () => {
 
   return (
     <SplitPane
-      size={isMapVisible ? size : '100%'}
+      size={size}
       onChange={debounce((size) => {
         setSize(size);
       }, 150)}
@@ -676,15 +676,15 @@ const PlacesMaps = () => {
                           onAttendeeRemove={handleRemoveAttendee}
                         />
                       )}
-
                       <button
                         onClick={() => {
                           setIsMapVisible(!isMapVisible);
+
                           if (isMapVisible) {
-                            setSize(1300);
+                            setSize('0%');
                             return;
                           }
-                          setSize(390);
+                          setSize('100%');
                         }}
                       >
                         <Map />
@@ -771,9 +771,9 @@ const PlacesMaps = () => {
 
             <div
               className={`grid ${
-                size > 1200
+                size >= 1200
                   ? 'grid-cols-3'
-                  : size > 800
+                  : size >= 800
                   ? 'grid-cols-2'
                   : 'grid-cols-1'
               }`}
@@ -879,6 +879,21 @@ const PlacesMaps = () => {
               路線
             </Button>
           )}
+
+          <button
+            className="absolute top-[10px] left-[340px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+            onClick={() => {
+              setIsMapVisible(!isMapVisible);
+
+              if (isMapVisible) {
+                setSize('0%');
+                return;
+              }
+              setSize('100%');
+            }}
+          >
+            <List />
+          </button>
         </div>
         <div ref={mapRef} style={{ height: '100vh' }} id="map" />
       </div>

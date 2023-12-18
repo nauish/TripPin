@@ -31,6 +31,9 @@ const Chat = () => {
       })
       .then((data) => {
         setMessages(data?.data);
+        if (data.error) {
+          setError(data.error);
+        }
       })
       .catch((err) => {
         console.error(err);
@@ -47,10 +50,10 @@ const Chat = () => {
   }, []);
 
   useEffect(() => {
-    if (isChatWindowOpen) {
+    if (isChatWindowOpen && !error && ref.current) {
       ref.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [isChatWindowOpen, messages]);
+  }, [isChatWindowOpen, messages, error]);
 
   const sendPromptToServerToGPT = async () => {
     try {
