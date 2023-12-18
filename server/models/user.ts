@@ -21,7 +21,7 @@ export async function insertUser(
   providerName: string,
   token: string,
   photo: string = '',
-): Promise<number> {
+): Promise<string> {
   const results = await pool.query(
     `
   INSERT INTO users (email, name, photo, provider_name, token)
