@@ -3,7 +3,6 @@ import {
   createBrowserRouter,
   createRoutesFromElements,
 } from 'react-router-dom';
-import Chat from '../components/Chat';
 import Auth from '../components/Auth';
 import ErrorHandler from '../components/Error';
 import RootLayout from '../layouts/RootLayout';
@@ -43,7 +42,6 @@ const router = createBrowserRouter(
         element={
           <>
             <PlacesMaps />
-            <Chat />
           </>
         }
       />
