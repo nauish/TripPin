@@ -147,7 +147,7 @@ export async function updatePlaceOrder(array: { order: number; id: number }[]) {
   );
 
   if (results) return results.rowCount;
-  throw new Error('Update place order failed');
+  throw new Error('更新地點失敗');
 }
 
 export async function insertSavedTrip(userId: number, tripId: number) {
