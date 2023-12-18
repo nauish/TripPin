@@ -25,7 +25,7 @@ const MyTrips = () => {
 
   return (
     <div>
-      <Trips trips={trips} showPlayer tripsName="我的行程" />
+      <Trips trips={trips} showPlayer showOptions tripsName="我的行程" />
     </div>
   );
 };
