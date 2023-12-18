@@ -9,6 +9,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'react-toastify';
 import { StarIcon } from 'lucide-react';
+import { Textarea } from './ui/textarea';
 
 const StarRating = ({ rating, onClick, className }) => {
   const maxRating = 5;
@@ -153,14 +154,18 @@ const Comment = () => {
                   />
                 </div>
 
-                <textarea
+                <Textarea
                   type="text"
                   value={input}
                   onChange={handleChange}
                   className="flex-1 border border-gray-300 rounded-lg p-2 min-h-[100px]"
                   placeholder="寫下對這個行程的心得吧！"
+                  maxLength="500"
                   required
                 />
+                <p className="text-xs text-gray-500 text-right">
+                  {input.length} / 500
+                </p>
 
                 <Label htmlFor="photos" className="pt-2">
                   上傳圖片
