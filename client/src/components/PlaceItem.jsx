@@ -1,18 +1,17 @@
 import { Draggable } from '@hello-pangea/dnd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from 'react-toastify';
-import { useSocket } from '@/context/SocketContext';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
+import { tagIconMapping } from '../lib/utils';
 import {
   Car,
   FileEdit,
   Footprints,
   Map,
-  MapPin,
   Navigation2,
   Ruler,
   Trash2,
@@ -20,6 +19,7 @@ import {
 
 const PlaceItem = ({
   tripId,
+  socket,
   user,
   place,
   updateData,
@@ -29,7 +29,6 @@ const PlaceItem = ({
   index,
   lockedPlace,
 }) => {
-  const socket = useSocket();
   const [formData, setFormData] = useState({ ...place });
   const [open, setOpen] = useState(false);
 
@@ -52,6 +51,18 @@ const PlaceItem = ({
       toast.success('景點已刪除');
     }
   };
+
+  useEffect(() => {
+    socket.on('newEditLock', ({ name, placeId }) => {
+      if (placeId === place.id && name === user.name) {
+        setOpen(true);
+      }
+    });
+
+    return () => {
+      socket.off('newEditLock');
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -114,13 +125,13 @@ const PlaceItem = ({
     if (distanceInM < 1000)
       return (
         <>
-          <Footprints />
+          <Footprints size={18} />
           {walkingTime}分鐘
         </>
       );
     return (
       <>
-        <Car />
+        <Car size={18} />
         {drivingTime}分鐘
       </>
     );
@@ -148,7 +159,7 @@ const PlaceItem = ({
                 {calculateSuggestTransportation(place.distance_from_previous)}
 
                 <span className="px-2"> | </span>
-                <Ruler />
+                <Ruler size={18} />
                 {formatDistance(place.distance_from_previous)}
                 <span className="px-2"> | </span>
                 <a
@@ -158,8 +169,8 @@ const PlaceItem = ({
                   className=" text-blue-600 hover:text-blue-800"
                 >
                   <span className="flex items-center">
-                    <Map />
-                    Google Maps
+                    <Map size={18} />
+                    Maps
                   </span>
                 </a>
               </span>
@@ -168,8 +179,10 @@ const PlaceItem = ({
           <div className=" my-2 group">
             <div
               className={`${
-                lockedPlace.includes(place.id) ? 'bg-red-200' : 'bg-gray-100'
-              } rounded-lg group-hover:rounded-t-lg group-hover:rounded-b-none p-4 cursor-move group-hover:bg-slate-100 w-full flex justify-between items-center`}
+                lockedPlace.find((lock) => lock.placeId === place.id)
+                  ? 'bg-red-200'
+                  : 'bg-gray-100'
+              } rounded-t-lg group-hover:rounded-t-lg group-hover:rounded-b-none p-4 cursor-move group-hover:bg-slate-100 w-full flex justify-between items-center`}
             >
               <div className="group">
                 <span className="text-sm text-gray-700">
@@ -178,29 +191,38 @@ const PlaceItem = ({
                   {place.end_hour && formatTime(place.end_hour)}
                 </span>
                 <h3 className="text-lg font-semibold flex items-center">
-                  <MapPin />
+                  <div className="font-sans">{tagIconMapping[place.type]}</div>
                   {place.name}
                 </h3>
+                {lockedPlace.find((lock) => lock.placeId === place.id) && (
+                  <span className="ml-2 text-sm text-red-500">
+                    (
+                    {lockedPlace.find((lock) => lock.placeId === place.id).name}
+                    正在編輯中)
+                  </span>
+                )}
                 <p className="text-gray-600 text-sm mb-1 ">{place.address}</p>
-                <div className="hidden group-hover:block  transition-transform duration-200">
+                <div className="">
                   <p className="text-gray-600 text-sm mb-1 ">
                     預算: {place.budget}
                   </p>
-                  <p className="text-gray-600 text-sm mb-1">
-                    類型: {place.type}
-                  </p>
-                  <p className="text-gray-600 text-sm mb-1">
-                    標籤: {place.tag}
-                  </p>
-                  <p className="text-gray-600 text-sm mb-1">
-                    筆記: {place.note}
-                  </p>
+
+                  {place.tag && (
+                    <p className="text-gray-600 text-sm mb-1">
+                      標籤: {place.tag}
+                    </p>
+                  )}
+                  {place.note && (
+                    <p className="text-gray-600 text-sm mb-1">
+                      筆記: {place.note}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
             {attendeeRole === 'attendee' && (
-              <div className="flex justify-between bg-gray-100 rounded-b-lg opacity-0 group-hover:bg-slate-100 group-hover:opacity-100 transition-opacity duration-200">
+              <div className="flex justify-between bg-gray-100 rounded-b-lg ">
                 <Button
                   variant="ghost"
                   className="w-full"
@@ -212,7 +234,7 @@ const PlaceItem = ({
                     centerToTheMarker(place.latitude, place.longitude);
                   }}
                 >
-                  <Navigation2 />
+                  <Navigation2 size={16} />
                   看地圖
                 </Button>
 
@@ -221,17 +243,28 @@ const PlaceItem = ({
                     variant="ghost"
                     className="text-gray-500 hover:text-gray-700 w-full"
                     onClick={() => {
-                      if (lockedPlace.includes(place.id))
-                        return toast.warning('協作者正在編輯中');
+                      if (
+                        lockedPlace.find(
+                          (lock) =>
+                            lock.placeId === place.id &&
+                            lock.name !== user.name,
+                        )
+                      )
+                        return toast.warning(
+                          `${
+                            lockedPlace.find(
+                              (lock) => lock.placeId === place.id,
+                            ).name
+                          }正在編輯中`,
+                        );
                       socket.emit('newEditLock', {
                         room: tripId,
                         name: user.name,
                         placeId: place.id,
                       });
-                      setOpen(true);
                     }}
                   >
-                    <FileEdit />
+                    <FileEdit size={16} />
                     編輯
                   </Button>
 
@@ -331,14 +364,24 @@ const PlaceItem = ({
                 </Dialog>
                 <Button
                   onClick={() => {
-                    if (lockedPlace.includes(place.id))
-                      return toast.warning('編輯中');
+                    if (
+                      lockedPlace.find(
+                        (lock) =>
+                          lock.placeId === place.id && lock.name !== user.name,
+                      )
+                    )
+                      return toast.warning(
+                        `${
+                          lockedPlace.find((lock) => lock.placeId === place.id)
+                            .name
+                        }正在編輯中`,
+                      );
                     deletePlace(place.id);
                   }}
                   variant="ghost"
                   className="text-red-500 hover:text-red-700 w-full"
                 >
-                  <Trash2 />
+                  <Trash2 size={16} />
                   刪除
                 </Button>
               </div>

@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogContent,
+  DialogClose,
 } from './ui/dialog';
 
 import { Label } from './ui/label';
@@ -55,7 +56,6 @@ const TripOptionButton = ({ trip, className }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setFormData({
       ...formData,
       [name]: value,
@@ -102,7 +102,7 @@ const TripOptionButton = ({ trip, className }) => {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button className={className}>
           <Menu size={24} color="black" />
@@ -142,19 +142,16 @@ const TripOptionButton = ({ trip, className }) => {
                 onChange={handleChange}
               />
             </div>
-            <div className="flex gap-4">
-              <div className="w-1/2">
-                <Label>日期</Label>
-                <DatePickerWithRange
-                  onDateChange={handleDateChange}
-                  defaultDate={{
-                    from: new Date(formData.start_date),
-                    to: new Date(formData.end_date),
-                  }}
-                />
-              </div>
+            <div>
+              <Label>日期</Label>
+              <DatePickerWithRange
+                onDateChange={handleDateChange}
+                defaultDate={{
+                  from: new Date(formData.start_date),
+                  to: new Date(formData.end_date),
+                }}
+              />
             </div>
-
             <div>
               <Label>預算</Label>
               <Input
@@ -183,16 +180,24 @@ const TripOptionButton = ({ trip, className }) => {
             </div>
             <div>
               <Label>隱私設定</Label>
-              <Input
-                type="text"
-                name="photo"
-                value={formData.privacy_setting || undefined}
+              <select
+                className="block appearance-none w-full border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                name="privacy_setting"
+                value={formData.privacy_setting}
                 onChange={handleChange}
-              />
+              >
+                <option value="public">公開（他人可以檢視）</option>
+                <option value="private">
+                  不公開（僅有受邀者可以檢視或編輯）
+                </option>
+              </select>
             </div>
             <div className="flex justify-end space-x-2">
+              <DialogClose asChild className="hover:cursor-pointer">
+                <Button variant="secondary">取消</Button>
+              </DialogClose>
               <Button
-                className="bg-green-700 hover:bg-green-50"
+                className=""
                 onClick={() => {
                   handleSubmit();
                 }}

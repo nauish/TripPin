@@ -31,7 +31,7 @@ const router = createBrowserRouter(
         }
       />
       <Route
-        path="/trips"
+        path="/explore"
         element={
           <>
             <LatestTrips />
@@ -48,7 +48,7 @@ const router = createBrowserRouter(
         }
       />
       <Route element={<ProtectedRoute />}>
-        <Route path="/trip" element={<TripForm />} />
+        <Route path="/trips" element={<TripForm />} />
         <Route
           path="/users/:userId/trips"
           element={

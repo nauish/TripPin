@@ -19,7 +19,7 @@ const Hero = () => {
           <h1 className=" font-bold text-6xl mb-3">想去哪？</h1>
           <p className=" text-xl mb-4">在 TripPin 上探索你的旅程</p>
           <div className="flex space-x-4 mt-8">
-            <Link to="/trip">
+            <Link to="/trips">
               <Button>開始規劃</Button>
             </Link>
           </div>

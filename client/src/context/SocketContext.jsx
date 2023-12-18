@@ -4,7 +4,11 @@ import io from 'socket.io-client';
 const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
-  const socket = io(import.meta.env.VITE_BACKEND_HOST);
+  const socket = io(import.meta.env.VITE_BACKEND_HOST, {
+    auth: {
+      token: localStorage.getItem('accessToken'),
+    },
+  });
   return (
     <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
   );

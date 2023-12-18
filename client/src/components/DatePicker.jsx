@@ -10,12 +10,12 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
-export function DatePickerWithRange({ className, onDateChange }) {
+export function DatePickerWithRange({ className, onDateChange, defaultDate }) {
   const today = new Date();
   const threeMonthFromToday = addMonths(today, 3);
   const [date, setDate] = useState({
-    from: threeMonthFromToday,
-    to: addDays(threeMonthFromToday, 7),
+    from: defaultDate?.from || threeMonthFromToday,
+    to: defaultDate?.to || addDays(threeMonthFromToday, 6),
   });
 
   useEffect(() => {

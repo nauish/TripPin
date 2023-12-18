@@ -3,7 +3,7 @@ import { useSocket } from '../context/SocketContext';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
-import { formatDate, formatBudget } from '@/lib/utils';
+import { formatDate, formatBudget, debounce } from '@/lib/utils';
 import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import useMapApi from '@/hooks/useMapApi';
@@ -22,12 +22,13 @@ import CopyTrip from './CopyTrip';
 import PlaceItem from './PlaceItem';
 import { Player } from '@lottiefiles/react-lottie-player';
 import { TooltipProvider } from './ui/tooltip';
-import ShareTrip from './ShareTrip';
-import { CalendarRange, Search } from 'lucide-react';
+import { CalendarRange, Map } from 'lucide-react';
 import SplitPane from '@rexxars/react-split-pane';
 import SearchResults from './SearchResults';
 import NearbySearchResults from './NearbySearchResults';
-// import Checklist from './Checklist';
+import TripOptionButton from './TripOptionButton';
+import Checklist from './Checklist';
+import OptimizeRouteButton from './OptimizeRoute';
 
 const reorder = (list, startIndex, end) => {
   const result = Array.from(list);
@@ -47,13 +48,17 @@ const PlacesMaps = () => {
   const [trip, setTrip] = useState(null);
   const [map, setMap] = useState(null);
   const [service, setService] = useState(null);
-  const [placeId, setPlaceId] = useState(null);
-  const [autocomplete, setAutocomplete] = useState(null);
+  const [isMapVisible, setIsMapVisible] = useState(true);
+  const [geometry, setGeometry] = useState(null);
+  const [polylineInstance, setPolylineInstance] = useState(null);
+  const [, setAutocomplete] = useState(null);
   const [attendees, setAttendees] = useState([]);
   const [clickLocation, setClickLocation] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
   const [nearbyResults, setNearbyResults] = useState([]);
   const [lockedPlaces, setLockedPlaces] = useState([]);
+  const [distance, setDistance] = useState(0);
+  const [size, setSize] = useState(390);
   const [dragging, setDragging] = useState(false);
   const { tripId } = useParams();
   const socket = useSocket();
@@ -109,10 +114,31 @@ const PlacesMaps = () => {
         setAttendees(attendees);
         const attendee = attendees.find((attendee) => +attendee.id === user.id);
         SetAttendeeRole(attendee?.role);
+
         if (attendee?.role === 'attendee') {
           socket.emit('newUserInRoom', { name: user.name, room: tripId });
-          socket.on('editLocks', (payload) => {
-            setLockedPlaces(payload.locks);
+          socket.on('getRoomLocks', (payload) => {
+            setLockedPlaces(
+              payload.locks.map((lock) => ({
+                name: lock.name,
+                placeId: lock.placeId,
+              })),
+            );
+          });
+          socket.emit('getRoomLocks', { room: tripId });
+          socket.on('newEditLock', ({ name, userId, placeId }) => {
+            setLockedPlaces((prev) => [...prev, { name, userId, placeId }]);
+          });
+          socket.on('newEditUnlock', ({ placeId }) => {
+            setLockedPlaces((prev) =>
+              prev.filter((lock) => lock.placeId !== placeId),
+            );
+          });
+          socket.on('userDisconnected', (payload) => {
+            setLockedPlaces((prev) =>
+              prev.filter((lock) => lock.userId !== payload.userId),
+            );
+            console.log(lockedPlaces);
           });
         }
       })
@@ -121,7 +147,8 @@ const PlacesMaps = () => {
       });
 
     return () => {
-      socket.off('editLocks');
+      socket.off('newEditLock');
+      socket.off('newEditUnlock');
     };
   };
 
@@ -160,21 +187,33 @@ const PlacesMaps = () => {
     fetchPlaces();
   }, []);
 
+  const loader = new Loader({
+    apiKey: import.meta.env.VITE_MAPS_API,
+    version: 'weekly',
+  });
+
   useEffect(() => {
     if (!Marker) return;
+    // Load Google Libraries
     const initMap = async () => {
-      const loader = new Loader({
-        apiKey: import.meta.env.VITE_MAPS_API,
-        version: 'weekly',
-      });
-      const [mapsLib, placesLib] = await Promise.all([
+      const [mapsLib, placesLib, geometryLib] = await Promise.all([
         loader.importLibrary('maps'),
         loader.importLibrary('places'),
+        loader.importLibrary('geometry'),
       ]);
+
       const map = await new mapsLib.Map(mapRef.current, {
         center: { lat: 25.085, lng: 121.39 },
         zoom: 13,
       });
+
+      const polyline = new mapsLib.Polyline({
+        strokeColor: '#FF0000',
+        strokeOpacity: 1.0,
+        strokeWeight: 3,
+      });
+      polyline.setMap(map);
+
       const autocomplete = new placesLib.Autocomplete(autocompleteRef.current, {
         types: ['establishment'],
       });
@@ -187,12 +226,22 @@ const PlacesMaps = () => {
 
       map.addListener('click', (location) => {
         setClickLocation(location.latLng.toJSON());
-        setPlaceId(location.placeId);
+
+        const request = {
+          placeId: location.placeId,
+        };
+
+        service.getDetails(request, (place, status) => {
+          if (status === 'OK') {
+            console.log(place);
+            setSearchResults((prev) => [...prev, place]);
+          }
+        });
       });
 
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
-
+        console.log(place);
         if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
         else map.setCenter(place.geometry.location);
 
@@ -205,14 +254,24 @@ const PlacesMaps = () => {
       });
 
       setMap(map);
+      setPolylineInstance(polyline);
       setService(service);
       setAutocomplete(autocomplete);
+      setGeometry(geometryLib);
 
-      socket.on('addNewPlaceToTrip', () => {
-        fetchPlaces();
+      socket.on('addNewPlaceToTrip', (payload) => {
+        const maxDayNumber = payload.maxDayNumber;
+
+        if (maxDayNumber <= 0) {
+          setData([{ dayNumber: 1, places: [] }]);
+          return;
+        }
+        setData(payload.data);
+        setSpending(payload.spending);
       });
+
       socket.on('getMarker', (data) => {
-        toast('有人送來地點');
+        toast.info('有人送來地點');
         new Marker({
           position: data.latLng,
           map: map,
@@ -227,6 +286,85 @@ const PlacesMaps = () => {
       socket.off('getMarker');
     };
   }, [Marker]);
+
+  const fetchRoute = async () => {
+    console.log(
+      data.slice(1, -1).map((day) =>
+        day.places.map((place) => ({
+          location: {
+            latLng: {
+              latitude: place.latitude,
+              longitude: place.longitude,
+            },
+          },
+        })),
+      ),
+    );
+    const requestBody = {
+      origin: {
+        location: {
+          latLng: {
+            latitude: data[0]?.places[0]?.latitude,
+            longitude: data[0]?.places[0]?.longitude,
+          },
+        },
+      },
+      destination: {
+        location: {
+          latLng: {
+            latitude: data.slice(-1)[0]?.places.slice(-1)[0]?.latitude,
+            longitude: data.slice(-1)[0]?.places.slice(-1)[0]?.longitude,
+          },
+        },
+      },
+      intermediates: [
+        data
+          .flatMap((day) => day.places)
+          .slice(1, -1)
+          .map((place) => ({
+            location: {
+              latLng: {
+                latitude: place.latitude,
+                longitude: place.longitude,
+              },
+            },
+          })),
+      ],
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_UNAWARE',
+      computeAlternativeRoutes: false,
+      routeModifiers: {
+        avoidTolls: false,
+        avoidHighways: false,
+        avoidFerries: false,
+      },
+      languageCode: 'zh-TW',
+      units: 'METRIC',
+    };
+
+    fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': import.meta.env.VITE_MAPS_API,
+        'X-Goog-FieldMask':
+          'routes.distanceMeters,routes.polyline.encodedPolyline',
+      },
+      body: JSON.stringify(requestBody),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error.message);
+        console.log(data);
+        const route = data.routes[0];
+        const { distanceMeters, polyline } = route;
+        setDistance(distanceMeters);
+        polylineInstance.setPath(
+          geometry.encoding.decodePath(polyline.encodedPolyline),
+        );
+      })
+      .catch((error) => console.error('Error:', error));
+  };
 
   // Mark the places on the map
   useEffect(() => {
@@ -267,7 +405,7 @@ const PlacesMaps = () => {
   const handleNearbySearch = (map, place) => {
     const request = {
       location: place.geometry.location,
-      radius: '5000',
+      radius: '3000',
       types: ['restaurant', 'establishment'],
     };
 
@@ -339,8 +477,12 @@ const PlacesMaps = () => {
     setDragging(false);
     const { destination, source, type, draggableId } = result;
     if (!destination) return;
-    if (lockedPlaces.includes(draggableId)) {
-      toast.warning('此景點正在被編輯，請稍後再試');
+    if (lockedPlaces.find((lock) => lock.placeId === draggableId)) {
+      toast.warning(
+        `此景點正在被${
+          lockedPlaces.find((lock) => lock.placeId === draggableId).name
+        }編輯中`,
+      );
       return;
     }
 
@@ -424,7 +566,6 @@ const PlacesMaps = () => {
       }
       socket.emit('newEditUnlock', {
         room: tripId,
-        name: user.name,
         placeId: source.droppableId,
       });
       setData(newOrderedData);
@@ -490,8 +631,11 @@ const PlacesMaps = () => {
 
   return (
     <SplitPane
+      size={isMapVisible ? size : '100%'}
+      onChange={debounce((size) => {
+        setSize(size);
+      }, 150)}
       className="split pt-16"
-      defaultSize={500}
       minSize={390}
       maxSize={-1}
     >
@@ -518,24 +662,47 @@ const PlacesMaps = () => {
                     </span>
                   </div>
                 </div>
-                <div className="flex py-2 gap-4">
-                  <TooltipProvider delayDuration={300}>
-                    <SaveTrip
-                      tripId={tripId}
-                      Authorization={Authorization}
-                      user={user}
+                <div className="flex py-2 justify-between">
+                  <div className="flex gap-4">
+                    <TooltipProvider delayDuration={300}>
+                      <SaveTrip
+                        tripId={tripId}
+                        Authorization={Authorization}
+                        user={user}
+                      />
+
+                      <CopyTrip TRIP_API_URL={TRIP_API_URL} />
+                      <DownloadPDF tripId={tripId} />
+                      {attendees && attendeeRole === 'attendee' && (
+                        <AddAttendees
+                          tripId={tripId}
+                          attendees={attendees}
+                          tripCreator={trip.user_id}
+                          onAttendeeAdd={handleAddAttendee}
+                          onAttendeeRemove={handleRemoveAttendee}
+                        />
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setIsMapVisible(!isMapVisible);
+                          if (isMapVisible) {
+                            setSize(1300);
+                            return;
+                          }
+                          setSize(390);
+                        }}
+                      >
+                        <Map />
+                      </button>
+                    </TooltipProvider>
+                  </div>
+                  {attendees && attendeeRole === 'attendee' && (
+                    <TripOptionButton
+                      trip={trip}
+                      className="bg-white hover:bg-slate-50 p-2"
                     />
-                    <CopyTrip TRIP_API_URL={TRIP_API_URL} />
-                    <DownloadPDF tripId={tripId} />
-                    <AddAttendees
-                      tripId={tripId}
-                      attendees={attendees}
-                      tripCreator={trip.user_id}
-                      onAttendeeAdd={handleAddAttendee}
-                      onAttendeeRemove={handleRemoveAttendee}
-                    />
-                    <ShareTrip tripId={tripId} />
-                  </TooltipProvider>
+                  )}
                 </div>
                 <div className="text-sm">
                   <div className="text-gray-600">
@@ -573,6 +740,7 @@ const PlacesMaps = () => {
               setCenter={setCenter}
               handleNearbySearch={handleNearbySearch}
               addPlaceToTrip={addPlaceToTrip}
+              setClickLocation={setClickLocation}
             />
             <NearbySearchResults
               map={map}
@@ -581,13 +749,41 @@ const PlacesMaps = () => {
               setCenter={setCenter}
               handleNearbySearch={handleNearbySearch}
               addPlaceToTrip={addPlaceToTrip}
+              setClickLocation={setClickLocation}
+              size={size}
             />
-            {/* <Checklist user={user} /> */}
+            <Checklist user={user} />
 
             <div className="flex justify-between mx-16 mt-10">
-              <h2 className="text-3xl font-bold pb-4">目前景點</h2>
+              <h2 className="text-2xl font-bold pb-2">目前景點</h2>
+              {attendeeRole === 'attendee' && (
+                <OptimizeRouteButton
+                  tripId={tripId}
+                  variant="secondary"
+                  onSuccess={() => {
+                    socket.emit('addNewPlaceToTrip', { room: tripId });
+                  }}
+                />
+              )}
             </div>
-            <div className="grid">
+            {distance > 0 && (
+              <div className="mx-16 mb-4">
+                <div className="flex gap-2">
+                  <div className="text-gray-600">總距離：</div>
+                  <div className="text-gray-600">{distance / 1000} 公里</div>
+                </div>
+              </div>
+            )}
+
+            <div
+              className={`grid ${
+                size > 1200
+                  ? 'grid-cols-3'
+                  : size > 800
+                  ? 'grid-cols-2'
+                  : 'grid-cols-1'
+              }`}
+            >
               {data.map((day) => (
                 <Droppable
                   droppableId={day.dayNumber.toString()}
@@ -605,10 +801,10 @@ const PlacesMaps = () => {
                         <AccordionItem value={`item-${day.dayNumber}`}>
                           <AccordionTrigger>
                             <div>
-                              <h2 className="text-xl font-bold mb-2">
+                              <h2 className="text-xl font-bold">
                                 第 {day.dayNumber} 天
                               </h2>
-                              <span className="text-gray-600 ml-auto">
+                              <span className="text-gray-600">
                                 {day.places.length} 個地點
                               </span>
                             </div>
@@ -618,6 +814,7 @@ const PlacesMaps = () => {
                               ? day.places.map((place, index) => (
                                   <PlaceItem
                                     place={place}
+                                    socket={socket}
                                     index={index}
                                     tripId={tripId}
                                     user={user}
@@ -638,9 +835,12 @@ const PlacesMaps = () => {
                                       src="https://lottie.host/91a02969-0942-4a3c-b0c1-8c3dd0070544/mSCAYQ8pDk.json"
                                       className="w-1/2 mx-auto"
                                     ></Player>
-                                    <h2 className="text-xl font-bold text-gray-800">
+                                    <div className="text-lg font-bold text-gray-800">
+                                      點地圖後或搜尋後
+                                    </div>
+                                    <div className="text-lg font-bold text-gray-800">
                                       請將景點拖到此處
-                                    </h2>
+                                    </div>
                                   </div>
                                 )}
                             {provided.placeholder}
@@ -672,9 +872,17 @@ const PlacesMaps = () => {
           {attendeeRole === 'attendee' && (
             <Button
               onClick={addMarker}
-              className="absolute top-[10px] left-[180px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+              className="absolute top-[10px] left-[185px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
             >
-              將標記傳給同伴
+              傳給同伴
+            </Button>
+          )}
+          {attendeeRole === 'attendee' && (
+            <Button
+              className="absolute top-[10px] left-[285px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+              onClick={fetchRoute}
+            >
+              路線
             </Button>
           )}
         </div>

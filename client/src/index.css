@@ -133,3 +133,8 @@
 .Resizer.disabled:hover {
   border-color: transparent;
 }
+
+.break-word {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
