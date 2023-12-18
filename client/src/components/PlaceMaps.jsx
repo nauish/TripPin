@@ -29,6 +29,7 @@ import NearbySearchResults from './NearbySearchResults';
 import TripOptionButton from './TripOptionButton';
 import Checklist from './Checklist';
 import OptimizeRouteButton from './OptimizeRoute';
+import Chat from './Chat';
 
 const reorder = (list, startIndex, end) => {
   const result = Array.from(list);
@@ -58,7 +59,7 @@ const PlacesMaps = () => {
   const [nearbyResults, setNearbyResults] = useState([]);
   const [lockedPlaces, setLockedPlaces] = useState([]);
   const [distance, setDistance] = useState(0);
-  const [size, setSize] = useState(390);
+  const [size, setSize] = useState('400');
   const [dragging, setDragging] = useState(false);
   const { tripId } = useParams();
   const socket = useSocket();
@@ -894,6 +895,7 @@ const PlacesMaps = () => {
           >
             <List />
           </button>
+          <Chat attendeeRole={attendeeRole} />
         </div>
         <div ref={mapRef} style={{ height: '100vh' }} id="map" />
       </div>

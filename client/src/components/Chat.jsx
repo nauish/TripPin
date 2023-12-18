@@ -8,7 +8,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 
-const Chat = () => {
+const Chat = ({ attendeeRole }) => {
   const [isChatWindowOpen, setIsChatWindowOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
@@ -20,6 +20,7 @@ const Chat = () => {
   const ref = useRef(null);
 
   useEffect(() => {
+    if (attendeeRole === 'attendee') return;
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/chat`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
@@ -125,7 +126,7 @@ const Chat = () => {
 
   return (
     <>
-      {!error && !isChatWindowOpen && (
+      {attendeeRole === 'attendee' && !isChatWindowOpen && (
         <div
           onClick={handleChatButtonClick}
           className="border-gray-300 border-2 fixed flex justify-center items-center 
