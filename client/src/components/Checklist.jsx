@@ -175,8 +175,7 @@ const Checklist = () => {
       },
     )
       .then((response) => response.json())
-      .then((json) => {
-        console.log(json);
+      .then(() => {
         setChecklists(
           checklists.map((checklist) => {
             if (checklist.id === checklistId) {

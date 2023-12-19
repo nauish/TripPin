@@ -60,7 +60,7 @@ const Comment = () => {
       );
 
       if (!response.ok) {
-        toast.error('請先登入');
+        toast.error('登入已過期，請先登入');
         return;
       }
 
@@ -136,70 +136,72 @@ const Comment = () => {
     <Card className="bg-white p-4 mx-16 my-4">
       <div className="flex justify-between ">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">評論</h2>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>新增評論</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <CardHeader>
-              <CardTitle>新增評論</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="grid space-y-2">
-                <div className="flex justify-center">
-                  <StarRating
-                    className="cursor-pointer text-3xl mb-4"
-                    rating={rating}
-                    onClick={handleRatingChange}
+        {user && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>新增評論</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <CardHeader>
+                <CardTitle>新增評論</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="grid space-y-2">
+                  <div className="flex justify-center">
+                    <StarRating
+                      className="cursor-pointer text-3xl mb-4"
+                      rating={rating}
+                      onClick={handleRatingChange}
+                    />
+                  </div>
+
+                  <Textarea
+                    type="text"
+                    value={input}
+                    onChange={handleChange}
+                    className="flex-1 border border-gray-300 rounded-lg p-2 min-h-[100px]"
+                    placeholder="寫下對這個行程的心得吧！"
+                    maxLength="500"
+                    required
                   />
-                </div>
+                  <p className="text-xs text-gray-500 text-right">
+                    {input.length} / 500
+                  </p>
 
-                <Textarea
-                  type="text"
-                  value={input}
-                  onChange={handleChange}
-                  className="flex-1 border border-gray-300 rounded-lg p-2 min-h-[100px]"
-                  placeholder="寫下對這個行程的心得吧！"
-                  maxLength="500"
-                  required
-                />
-                <p className="text-xs text-gray-500 text-right">
-                  {input.length} / 500
-                </p>
-
-                <Label htmlFor="photos" className="pt-2">
-                  上傳圖片
-                </Label>
-                <Input
-                  type="file"
-                  name="photos"
-                  id="photos"
-                  accept="image/*"
-                  className="cursor-pointer"
-                  encType="multipart/form-data"
-                  onChange={handleFileChange}
-                  multiple
-                />
-                <div className="flex gap-2">
-                  <DialogClose asChild>
-                    <Button className="w-full bg-gray-500">取消</Button>
-                  </DialogClose>
-                  <Button
-                    className="w-full"
-                    type="submit"
-                    onClick={() => {
-                      if (input) {
-                        setOpen(false);
-                      }
-                    }}
-                  >
-                    評論
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </DialogContent>
-        </Dialog>
+                  <Label htmlFor="photos" className="pt-2">
+                    上傳圖片
+                  </Label>
+                  <Input
+                    type="file"
+                    name="photos"
+                    id="photos"
+                    accept="image/*"
+                    className="cursor-pointer"
+                    encType="multipart/form-data"
+                    onChange={handleFileChange}
+                    multiple
+                  />
+                  <div className="flex gap-2">
+                    <DialogClose asChild>
+                      <Button className="w-full bg-gray-500">取消</Button>
+                    </DialogClose>
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      onClick={() => {
+                        if (input) {
+                          setOpen(false);
+                        }
+                      }}
+                    >
+                      評論
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {comments && comments.length > 0 ? (

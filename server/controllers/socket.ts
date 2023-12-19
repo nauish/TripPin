@@ -31,7 +31,7 @@ function socketEvents(socket: Socket) {
     socket.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
   });
   socket.on('addNewPlaceToTrip', async (payload) => {
-    io.sockets.to(payload.room).emit('addNewPlaceToTrip', true);
+    socket.to(payload.room).emit('addNewPlaceToTrip', true);
   });
 
   socket.on('getRoomLocks', async (payload) => {

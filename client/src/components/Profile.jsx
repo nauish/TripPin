@@ -8,6 +8,7 @@ const SignOutButton = () => {
   const navigate = useNavigate();
   const handleClearLocalStorage = () => {
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
     toast.warning('您已登出！', {
       autoClose: 2000,
     });
