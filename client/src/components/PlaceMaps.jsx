@@ -564,7 +564,7 @@ const PlacesMaps = () => {
         });
         sourceList.places = reorderedList;
         updateItemOrders(sourceList.places);
-        fetchPlaces();
+
         socket && socket.emit('addNewPlaceToTrip', { room: tripId });
       } else {
         // Move the card between lists
@@ -580,7 +580,6 @@ const PlacesMaps = () => {
         sourceList.places.forEach((place, idx) => (place.order = idx));
         destList.places.forEach((place, idx) => (place.order = idx));
         updateItemOrders(destList.places);
-        fetchPlaces();
       }
 
       socket &&
@@ -611,6 +610,7 @@ const PlacesMaps = () => {
           toast(json.error);
           return;
         }
+        fetchPlaces();
       });
   };
 
@@ -626,7 +626,6 @@ const PlacesMaps = () => {
       });
 
       if (response.status === 200) {
-        fetchPlaces();
         socket && socket.emit('addNewPlaceToTrip', { room: tripId });
         return true;
       } else {

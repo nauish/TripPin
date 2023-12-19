@@ -111,6 +111,7 @@ const PlaceItem = ({
       placeId: place.id,
     });
     setOpen(false);
+    fetchPlaces();
   };
 
   const formatDistance = (distance) => {
