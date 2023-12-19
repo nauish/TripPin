@@ -47,12 +47,13 @@ const PlaceItem = ({
     );
 
     if (response.status === 200) {
-      socket.emit('addNewPlaceToTrip', { room: tripId });
+      if (socket) socket.emit('addNewPlaceToTrip', { room: tripId });
       toast.success('景點已刪除');
     }
   };
 
   useEffect(() => {
+    if (!socket) return;
     socket.on('newEditLock', ({ name, placeId }) => {
       if (placeId === place.id && name === user.name) {
         setOpen(true);
@@ -62,7 +63,7 @@ const PlaceItem = ({
     return () => {
       socket.off('newEditLock');
     };
-  }, []);
+  }, [socket]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

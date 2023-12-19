@@ -42,12 +42,13 @@ const Chat = ({ attendeeRole }) => {
         setError(err);
       });
 
-    socket.on('newChatMessage', (message) => {
-      setMessages((prevMessages) => [...prevMessages, message]);
-    });
+    socket &&
+      socket.on('newChatMessage', (message) => {
+        setMessages((prevMessages) => [...prevMessages, message]);
+      });
 
     return () => {
-      socket.off('newChatMessage');
+      socket && socket.off('newChatMessage');
     };
   }, [attendeeRole]);
 
@@ -102,7 +103,7 @@ const Chat = ({ attendeeRole }) => {
     };
 
     if (trimmedMessage !== '') {
-      socket.emit('newChatMessage', newChatMessage);
+      socket && socket.emit('newChatMessage', newChatMessage);
       setMessages((prevMessages) => [...prevMessages, newChatMessage]);
     }
 
