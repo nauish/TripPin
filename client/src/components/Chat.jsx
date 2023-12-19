@@ -20,7 +20,8 @@ const Chat = ({ attendeeRole }) => {
   const ref = useRef(null);
 
   useEffect(() => {
-    if (attendeeRole === 'attendee') return;
+    if (attendeeRole !== 'attendee') return;
+
     fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/chat`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
@@ -48,7 +49,7 @@ const Chat = ({ attendeeRole }) => {
     return () => {
       socket.off('newChatMessage');
     };
-  }, []);
+  }, [attendeeRole]);
 
   useEffect(() => {
     if (isChatWindowOpen && !error && ref.current) {
@@ -183,7 +184,7 @@ const Chat = ({ attendeeRole }) => {
               </div>
             )}
 
-            <div className="flex items-center">
+            <div className="flex items-center mt-2">
               <Textarea
                 type="text"
                 value={messageInput}

@@ -70,7 +70,7 @@ const PlacesMaps = () => {
   const socket = useSocket();
   const navigate = useNavigate();
   const autocompleteRef = useRef(null);
-  const [attendeeRole, SetAttendeeRole] = useState(null);
+  const [attendeeRole, setAttendeeRole] = useState(null);
   const TRIP_API_URL = `${
     import.meta.env.VITE_BACKEND_HOST
   }api/v1/trips/${tripId}`;
@@ -104,6 +104,10 @@ const PlacesMaps = () => {
     fetch(`${TRIP_API_URL}/clicks`, {
       method: 'POST',
     });
+    return () => {
+      socket.off('newEditLock');
+      socket.off('newEditUnlock');
+    };
   }, []);
 
   const fetchAttendees = () => {
@@ -119,7 +123,7 @@ const PlacesMaps = () => {
         const { attendees } = json;
         setAttendees(attendees);
         const attendee = attendees.find((attendee) => +attendee.id === user.id);
-        SetAttendeeRole(attendee?.role);
+        setAttendeeRole(attendee?.role);
 
         if (attendee?.role === 'attendee') {
           socket.emit('newUserInRoom', { name: user.name, room: tripId });
@@ -151,11 +155,6 @@ const PlacesMaps = () => {
       .catch((error) => {
         console.log(error);
       });
-
-    return () => {
-      socket.off('newEditLock');
-      socket.off('newEditUnlock');
-    };
   };
 
   const fetchPlaces = () => {
@@ -313,18 +312,6 @@ const PlacesMaps = () => {
   }, [Marker]);
 
   const fetchRoute = async () => {
-    console.log(
-      data.slice(1, -1).map((day) =>
-        day.places.map((place) => ({
-          location: {
-            latLng: {
-              latitude: place.latitude,
-              longitude: place.longitude,
-            },
-          },
-        })),
-      ),
-    );
     const requestBody = {
       origin: {
         location: {
@@ -477,6 +464,7 @@ const PlacesMaps = () => {
     });
 
     if (response.status === 200) {
+      fetchPlaces();
       toast.success('已新增景點');
       socket.emit('addNewPlaceToTrip', { room: tripId });
     }
@@ -616,6 +604,7 @@ const PlacesMaps = () => {
           toast(json.error);
           return;
         }
+        fetchPlaces();
       });
   };
 
@@ -631,6 +620,7 @@ const PlacesMaps = () => {
       });
 
       if (response.status === 200) {
+        fetchPlaces();
         socket.emit('addNewPlaceToTrip', { room: tripId });
         return true;
       } else {
@@ -706,7 +696,7 @@ const PlacesMaps = () => {
                         />
                       )}
                       <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                           <button
                             className="hover:text-blue-500"
                             onClick={() => {
@@ -797,6 +787,7 @@ const PlacesMaps = () => {
                   tripId={tripId}
                   variant="secondary"
                   onSuccess={() => {
+                    fetchPlaces();
                     socket.emit('addNewPlaceToTrip', { room: tripId });
                   }}
                 />
