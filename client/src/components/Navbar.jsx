@@ -30,7 +30,7 @@ const Navbar = () => {
       }`}
     >
       <div className="px-8 md:px-16 flex flex-wrap items-center justify-between mx-auto p-2">
-        <NavLink to="/">
+        <NavLink to="/" reloadDocument>
           <div className="flex items-center">
             <img className="h-12" src="/logo.webp" alt="TripPin Logo" />
             <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">

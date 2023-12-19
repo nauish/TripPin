@@ -21,7 +21,12 @@ import {
 import CopyTrip from './CopyTrip';
 import PlaceItem from './PlaceItem';
 import { Player } from '@lottiefiles/react-lottie-player';
-import { TooltipProvider } from './ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 import { CalendarRange, List, Map } from 'lucide-react';
 import SplitPane from '@rexxars/react-split-pane';
 import SearchResults from './SearchResults';
@@ -59,7 +64,7 @@ const PlacesMaps = () => {
   const [nearbyResults, setNearbyResults] = useState([]);
   const [lockedPlaces, setLockedPlaces] = useState([]);
   const [distance, setDistance] = useState(0);
-  const [size, setSize] = useState('400');
+  const [size, setSize] = useState(390);
   const [dragging, setDragging] = useState(false);
   const { tripId } = useParams();
   const socket = useSocket();
@@ -183,6 +188,30 @@ const PlacesMaps = () => {
         console.log(error);
       });
   };
+
+  useEffect(() => {
+    if (window.innerWidth <= 768) {
+      setSize('100%');
+      setIsMapVisible(false);
+    } else {
+      setSize(550);
+    }
+
+    const handleResize = debounce(() => {
+      if (window.innerWidth <= 768) {
+        setSize('100%');
+        setIsMapVisible(false);
+      } else {
+        setSize(550);
+      }
+    }, 150);
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     fetchPlaces();
@@ -592,7 +621,6 @@ const PlacesMaps = () => {
 
   const updateData = async (data, placeId) => {
     try {
-      console.log(data);
       const response = await fetch(`${TRIP_API_URL}/places/${placeId}`, {
         method: 'PUT',
         headers: {
@@ -627,9 +655,9 @@ const PlacesMaps = () => {
   return (
     <SplitPane
       size={size}
-      onChange={debounce((size) => {
+      onChange={(size) => {
         setSize(size);
-      }, 150)}
+      }}
       className="split pt-16"
       minSize={390}
       maxSize={-1}
@@ -677,19 +705,32 @@ const PlacesMaps = () => {
                           onAttendeeRemove={handleRemoveAttendee}
                         />
                       )}
-                      <button
-                        onClick={() => {
-                          setIsMapVisible(!isMapVisible);
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <button
+                            className="hover:text-blue-500"
+                            onClick={() => {
+                              setIsMapVisible(!isMapVisible);
+                              if (!isMapVisible && window.innerWidth <= 768) {
+                                setSize(0);
+                                return;
+                              }
 
-                          if (isMapVisible) {
-                            setSize('0%');
-                            return;
-                          }
-                          setSize('100%');
-                        }}
-                      >
-                        <Map />
-                      </button>
+                              if (!isMapVisible) {
+                                setSize(550);
+                                return;
+                              }
+
+                              setSize(window.innerWidth);
+                            }}
+                          >
+                            <Map />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>放大地圖</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </TooltipProvider>
                   </div>
                   {attendees && attendeeRole === 'attendee' && (
@@ -864,37 +905,33 @@ const PlacesMaps = () => {
 
       <div className="h-full">
         <div className="relative">
+          <button
+            className="absolute top-[10px] left-[185px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+            onClick={() => {
+              setIsMapVisible(!isMapVisible);
+
+              setSize(window.innerWidth);
+            }}
+          >
+            <List />
+          </button>
           {attendeeRole === 'attendee' && (
             <Button
               onClick={addMarker}
-              className="absolute top-[10px] left-[185px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+              className="absolute top-[10px] left-[240px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
             >
               傳給同伴
             </Button>
           )}
           {attendeeRole === 'attendee' && (
             <Button
-              className="absolute top-[10px] left-[285px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
+              className="absolute top-[10px] left-[340px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
               onClick={fetchRoute}
             >
               路線
             </Button>
           )}
 
-          <button
-            className="absolute top-[10px] left-[340px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
-            onClick={() => {
-              setIsMapVisible(!isMapVisible);
-
-              if (isMapVisible) {
-                setSize('0%');
-                return;
-              }
-              setSize('100%');
-            }}
-          >
-            <List />
-          </button>
           <Chat attendeeRole={attendeeRole} />
         </div>
         <div ref={mapRef} style={{ height: '100vh' }} id="map" />
