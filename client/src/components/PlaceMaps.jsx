@@ -104,7 +104,9 @@ const PlacesMaps = () => {
     fetch(`${TRIP_API_URL}/clicks`, {
       method: 'POST',
     });
+
     return () => {
+      if (!socket) return;
       socket.off('newEditLock');
       socket.off('newEditUnlock');
     };
@@ -126,6 +128,7 @@ const PlacesMaps = () => {
         setAttendeeRole(attendee?.role);
 
         if (attendee?.role === 'attendee') {
+          if (!socket) return;
           socket.emit('newUserInRoom', { name: user.name, room: tripId });
           socket.on('getRoomLocks', (payload) => {
             setLockedPlaces(
@@ -288,10 +291,16 @@ const PlacesMaps = () => {
       setAutocomplete(autocomplete);
       setGeometry(geometryLib);
 
+      if (!socket) return;
       socket.on('addNewPlaceToTrip', (payload) => {
-        if (payload) {
-          fetchPlaces();
+        const maxDayNumber = payload.maxDayNumber;
+
+        if (maxDayNumber <= 0) {
+          setData([{ dayNumber: 1, places: [] }]);
+          return;
         }
+        setData(payload.data);
+        setSpending(payload.spending);
       });
 
       socket.on('getMarker', (data) => {
@@ -307,6 +316,7 @@ const PlacesMaps = () => {
     initMap();
 
     return () => {
+      if (!socket) return;
       socket.off('getMarker');
     };
   }, [Marker]);
@@ -403,7 +413,8 @@ const PlacesMaps = () => {
       position: { lat: clickLocation.lat, lng: clickLocation.lng },
       map: map,
     });
-    console.log(clickLocation);
+
+    if (!socket) return;
     socket.emit('getMarker', {
       room: tripId,
       latLng: { lat: clickLocation.lat, lng: clickLocation.lng },
@@ -464,13 +475,11 @@ const PlacesMaps = () => {
     });
 
     if (response.status === 200) {
-      fetchPlaces();
+      // fetchPlaces();
       toast.success('已新增景點');
+      if (!socket) return;
       socket.emit('addNewPlaceToTrip', { room: tripId });
     }
-
-    const json = await response.json();
-    console.log(json);
   };
 
   const addNewDay = () => {
@@ -529,11 +538,12 @@ const PlacesMaps = () => {
       return;
     }
 
-    socket.emit('newEditLock', {
-      room: tripId,
-      name: user.name,
-      placeId: source.droppableId,
-    });
+    socket &&
+      socket.emit('newEditLock', {
+        room: tripId,
+        name: user.name,
+        placeId: source.droppableId,
+      });
 
     if (type === 'card') {
       let newOrderedData = [...data];
@@ -561,7 +571,7 @@ const PlacesMaps = () => {
         });
         sourceList.places = reorderedList;
         updateItemOrders(sourceList.places);
-        socket.emit('addNewPlaceToTrip', { room: tripId });
+        socket && socket.emit('addNewPlaceToTrip', { room: tripId });
       } else {
         // Move the card between lists
         const [movedPlace] = sourceList.places.splice(source.index, 1);
@@ -577,10 +587,12 @@ const PlacesMaps = () => {
         destList.places.forEach((place, idx) => (place.order = idx));
         updateItemOrders(destList.places);
       }
-      socket.emit('newEditUnlock', {
-        room: tripId,
-        placeId: source.droppableId,
-      });
+
+      socket &&
+        socket.emit('newEditUnlock', {
+          room: tripId,
+          placeId: source.droppableId,
+        });
     }
   };
 
@@ -604,7 +616,6 @@ const PlacesMaps = () => {
           toast(json.error);
           return;
         }
-        fetchPlaces();
       });
   };
 
@@ -620,8 +631,7 @@ const PlacesMaps = () => {
       });
 
       if (response.status === 200) {
-        fetchPlaces();
-        socket.emit('addNewPlaceToTrip', { room: tripId });
+        socket && socket.emit('addNewPlaceToTrip', { room: tripId });
         return true;
       } else {
         const json = await response.json();
@@ -787,8 +797,9 @@ const PlacesMaps = () => {
                   tripId={tripId}
                   variant="secondary"
                   onSuccess={() => {
-                    fetchPlaces();
-                    socket.emit('addNewPlaceToTrip', { room: tripId });
+                    // fetchPlaces();
+                    socket &&
+                      socket.emit('addNewPlaceToTrip', { room: tripId });
                   }}
                 />
               )}
@@ -851,6 +862,7 @@ const PlacesMaps = () => {
                                     updateData={updateData}
                                     lockedPlace={lockedPlaces}
                                     centerToTheMarker={centerToTheMarker}
+                                    fetchPlaces={fetchPlaces}
                                   />
                                 ))
                               : !dragging &&
