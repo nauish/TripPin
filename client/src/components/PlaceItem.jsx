@@ -28,6 +28,7 @@ const PlaceItem = ({
   attendeeRole,
   index,
   lockedPlace,
+  fetchPlaces,
 }) => {
   const [formData, setFormData] = useState({ ...place });
   const [open, setOpen] = useState(false);
@@ -47,6 +48,7 @@ const PlaceItem = ({
     );
 
     if (response.status === 200) {
+      fetchPlaces();
       if (socket) socket.emit('addNewPlaceToTrip', { room: tripId });
       toast.success('景點已刪除');
     }

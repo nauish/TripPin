@@ -129,7 +129,7 @@ const TripOptionButton = ({ trip, className }) => {
               <Input
                 type="text"
                 name="name"
-                value={formData.name || undefined}
+                value={formData.name || ''}
                 onChange={handleChange}
               />
             </div>
@@ -138,7 +138,7 @@ const TripOptionButton = ({ trip, className }) => {
               <Input
                 type="text"
                 name="destination"
-                value={formData.destination || undefined}
+                value={formData.destination || ''}
                 onChange={handleChange}
               />
             </div>
@@ -165,7 +165,7 @@ const TripOptionButton = ({ trip, className }) => {
               <Label>筆記</Label>
               <Textarea
                 name="note"
-                value={formData.note || undefined}
+                value={formData.note || ''}
                 onChange={handleChange}
               ></Textarea>
             </div>
@@ -173,8 +173,8 @@ const TripOptionButton = ({ trip, className }) => {
               <Label>類型</Label>
               <Input
                 type="text"
-                name="photo"
-                value={formData.type || undefined}
+                name="type"
+                value={formData.type || ''}
                 onChange={handleChange}
               />
             </div>
