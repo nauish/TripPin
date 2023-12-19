@@ -292,15 +292,8 @@ const PlacesMaps = () => {
       setGeometry(geometryLib);
 
       if (!socket) return;
-      socket.on('addNewPlaceToTrip', (payload) => {
-        const maxDayNumber = payload.maxDayNumber;
-
-        if (maxDayNumber <= 0) {
-          setData([{ dayNumber: 1, places: [] }]);
-          return;
-        }
-        setData(payload.data);
-        setSpending(payload.spending);
+      socket.on('addNewPlaceToTrip', () => {
+        fetchPlaces();
       });
 
       socket.on('getMarker', (data) => {
@@ -475,7 +468,7 @@ const PlacesMaps = () => {
     });
 
     if (response.status === 200) {
-      // fetchPlaces();
+      fetchPlaces();
       toast.success('已新增景點');
       if (!socket) return;
       socket.emit('addNewPlaceToTrip', { room: tripId });
@@ -571,6 +564,7 @@ const PlacesMaps = () => {
         });
         sourceList.places = reorderedList;
         updateItemOrders(sourceList.places);
+        fetchPlaces();
         socket && socket.emit('addNewPlaceToTrip', { room: tripId });
       } else {
         // Move the card between lists
@@ -586,6 +580,7 @@ const PlacesMaps = () => {
         sourceList.places.forEach((place, idx) => (place.order = idx));
         destList.places.forEach((place, idx) => (place.order = idx));
         updateItemOrders(destList.places);
+        fetchPlaces();
       }
 
       socket &&
@@ -631,6 +626,7 @@ const PlacesMaps = () => {
       });
 
       if (response.status === 200) {
+        fetchPlaces();
         socket && socket.emit('addNewPlaceToTrip', { room: tripId });
         return true;
       } else {
@@ -797,7 +793,7 @@ const PlacesMaps = () => {
                   tripId={tripId}
                   variant="secondary"
                   onSuccess={() => {
-                    // fetchPlaces();
+                    fetchPlaces();
                     socket &&
                       socket.emit('addNewPlaceToTrip', { room: tripId });
                   }}

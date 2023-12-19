@@ -44,6 +44,9 @@ const Auth = () => {
       localStorage.setItem('user', JSON.stringify(user));
 
       navigate(-1);
+      setTimeout(() => {
+        navigate(0);
+      }, 500);
     } catch (error) {
       console.log(error);
     }
