@@ -29,7 +29,7 @@ const LatestTrips = () => {
   return (
     <>
       <div className="flex w-full flex-col items-center justify-center">
-        <div className="pt-28 -mb-8 z-10 max-w-xl">
+        <div className="pt-36 -mb-8 z-10 max-w-xl">
           <Select value={sort} onValueChange={setSort}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="請選擇" />
