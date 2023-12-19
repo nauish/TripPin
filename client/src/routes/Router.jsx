@@ -29,22 +29,8 @@ const router = createBrowserRouter(
           </>
         }
       />
-      <Route
-        path="/explore"
-        element={
-          <>
-            <LatestTrips />
-          </>
-        }
-      />
-      <Route
-        path="/trips/:tripId"
-        element={
-          <>
-            <PlacesMaps />
-          </>
-        }
-      />
+      <Route path="/explore" element={<LatestTrips />} />
+      <Route path="/trips/:tripId" element={<PlacesMaps />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/trips" element={<TripForm />} />
         <Route

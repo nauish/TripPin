@@ -25,7 +25,7 @@ const Hero = () => {
           </div>
         </div>
       </div>
-      <div className="flex justify-center -mt-20">
+      <div className="flex justify-center -mt-40">
         <ChevronDown
           strokeWidth={4}
           size={48}
