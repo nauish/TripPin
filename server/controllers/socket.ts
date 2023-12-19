@@ -2,7 +2,6 @@ import { Socket, Server } from 'socket.io';
 import { insertChat } from '../models/chat.js';
 import { getCacheInstance } from '../models/cache.js';
 import { verifyJWT } from '../middleware/authentication.js';
-import { selectPlacesByTripId } from '../models/place.js';
 
 let io: Server;
 const cache = getCacheInstance();
