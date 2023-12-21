@@ -101,7 +101,7 @@ export async function selectCompleteTripInfo(id: number) {
         )
       )
     FROM trips t
-    LEFT JOIN PlaceDistances pd ON pd.trip_id = t.id
+    RIGHT JOIN PlaceDistances pd ON pd.trip_id = t.id
     LEFT JOIN users u ON t.user_id = u.id
     GROUP BY t.id, u.id;
   `,
