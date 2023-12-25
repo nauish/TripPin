@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import pool from './dbPools.js';
+import { Trip } from '../types/trip.js';
 
 const UserSchema = z.object({
   id: z.coerce.number(),
@@ -70,7 +71,7 @@ export async function selectAttendeesByTripIdAndUserId(tripId: number, userId: n
   return attendees;
 }
 
-export async function selectTripsAttendedByUser(userId: number) {
+export async function selectTripsAttendedByUser(userId: number): Promise<Trip[]> {
   const results = await pool.query(
     `
     SELECT t.id, t.name, t.destination, t.start_date, t.end_date, t.budget, t.type, t.privacy_setting, t.note, t.photo
@@ -84,7 +85,11 @@ export async function selectTripsAttendedByUser(userId: number) {
   return results.rows;
 }
 
-export async function updateUserRole(tripId: number, userId: number, role: string) {
+export async function updateUserRole(
+  tripId: number,
+  userId: number,
+  role: string,
+): Promise<number> {
   const results = await pool.query(
     `
     UPDATE attendees
@@ -93,10 +98,10 @@ export async function updateUserRole(tripId: number, userId: number, role: strin
     `,
     [role, tripId, userId],
   );
-  return results.rowCount;
+  return results.rowCount ?? 0;
 }
 
-export async function deleteAttendeeFromTrip(tripId: number, userId: number) {
+export async function deleteAttendeeFromTrip(tripId: number, userId: number): Promise<number> {
   const results = await pool.query(
     `
     DELETE FROM attendees
@@ -104,5 +109,5 @@ export async function deleteAttendeeFromTrip(tripId: number, userId: number) {
     `,
     [tripId, userId],
   );
-  return results.rowCount;
+  return results.rowCount ?? 0;
 }
