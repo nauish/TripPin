@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Trips from '@/components/Trips';
 import {
   Select,
@@ -10,7 +10,9 @@ import {
 
 const LatestTrips = () => {
   const [trips, setTrips] = useState([]);
-  const [sort, setSort] = useState('latest'); // ['latest', 'top-rated', 'hottest']
+  const [sort, setSort] = useState('hottest'); // ['latest', 'top-rated', 'hottest']
+  const [nextPage, setNextPage] = useState(1);
+  const loaderRef = useRef(null);
 
   const tripNames = {
     latest: '最新行程',
@@ -18,12 +20,45 @@ const LatestTrips = () => {
     hottest: '最熱門',
   };
 
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips?sort=${sort}`)
+  const fetchTrip = useCallback(() => {
+    console.log('fetchTrip');
+    fetch(
+      `${
+        import.meta.env.VITE_BACKEND_HOST
+      }api/v1/trips?sort=${sort}&page=${nextPage}`,
+    )
       .then((res) => res.json())
       .then((json) => {
-        setTrips(json.data);
+        console.log(json);
+        setNextPage(json.nextPage);
+        setTrips((prevTrips) => [...prevTrips, ...json.data]);
       });
+  }, [sort, nextPage]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && nextPage) {
+          fetchTrip();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '0px',
+        threshold: 1.0,
+      },
+    );
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [fetchTrip, nextPage]);
+
+  useEffect(() => {
+    setTrips([]);
+    setNextPage(1);
   }, [sort]);
 
   return (
@@ -44,6 +79,7 @@ const LatestTrips = () => {
           </Select>
         </div>
         <Trips trips={trips} tripsName={tripNames[sort]} />
+        <div ref={loaderRef} className="w-full h-1 bg-transparent" />
       </div>
     </>
   );

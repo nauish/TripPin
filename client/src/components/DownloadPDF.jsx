@@ -1,4 +1,4 @@
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { useState } from 'react';
 import { HardDriveDownload } from 'lucide-react';
@@ -8,40 +8,38 @@ const DownloadPDF = ({ tripId }) => {
 
   const handleDownload = async () => {
     setIsLoading(true);
-    try {
-      const response = await toast.promise(
-        fetch(
-          `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/pdf`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-          },
-        ),
-        {
-          pending: '製作 PDF 中...',
+    toast.promise(
+      fetch(`${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/pdf`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'trip.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      toast.success('您的 PDF 已製作完成');
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setIsLoading(false);
-    }
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('無法產生 PDF');
+          }
+          return response.blob();
+        })
+        .then((blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'trip.pdf';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          toast.success('您的 PDF 已製作完成');
+        })
+        .catch((error) => {
+          toast.error(error.message);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        }),
+      {
+        loading: '製作 PDF 中...',
+      },
+    );
   };
 
   return (

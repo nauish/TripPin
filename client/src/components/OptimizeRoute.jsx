@@ -1,5 +1,5 @@
 import { Button } from './ui/button';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 const OptimizeRouteButton = ({ tripId, className, variant, onSuccess }) => {
   const optimizeRoute = () => {
@@ -22,7 +22,7 @@ const OptimizeRouteButton = ({ tripId, className, variant, onSuccess }) => {
         if (json.data.message) {
           onSuccess(json.data);
           toast.success(json.data.message, {
-            autoClose: 2000,
+            duration: 2000,
           });
         }
         if (json.error) toast.error(json.error);

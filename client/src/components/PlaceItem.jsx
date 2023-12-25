@@ -1,7 +1,7 @@
 import { Draggable } from '@hello-pangea/dnd';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
@@ -63,9 +63,28 @@ const PlaceItem = ({
     });
 
     return () => {
-      socket.off('newEditLock');
+      socket && socket.off('newEditLock');
     };
   }, [socket]);
+
+  useEffect(() => {
+    let intervalId;
+
+    if (open) {
+      intervalId = setInterval(() => {
+        if (!socket) return;
+        socket.emit('extendEditLock', {
+          room: tripId,
+          name: user.name,
+          placeId: place.id,
+        });
+      }, 50000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [open, socket]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

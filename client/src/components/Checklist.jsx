@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -18,7 +18,7 @@ const Checklist = () => {
   const [itemInput, setItemInput] = useState('');
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editingItemId, setEditingItemId] = useState(null);
-  const [editingItemValue, setEditingItemValue] = useState();
+  const [editingItemValue, setEditingItemValue] = useState('');
   const checklistInputRef = useRef(null);
 
   useEffect(() => {
@@ -27,25 +27,34 @@ const Checklist = () => {
     }
   }, [editingIndex]);
 
-  const fetchChecklists = () => {
-    fetch(
-      `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/checklists`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+  const fetchChecklists = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_HOST}api/v1/trips/${tripId}/checklists`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
         },
-      },
-    )
-      .then((response) => response.json())
-      .then((json) => {
-        console.log(json);
-        setChecklists(json.data);
-      });
-  };
+      );
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const json = await response.json();
+      setChecklists(json.data);
+    } catch (error) {
+      console.error(
+        'There has been a problem with your fetch operation: ',
+        error,
+      );
+    }
+  }, [tripId]); // fetchChecklists will only be redefined if its dependencies change
 
   useEffect(() => {
     fetchChecklists();
-  }, []);
+  }, [fetchChecklists]);
 
   const addChecklist = (event) => {
     event.preventDefault();
@@ -104,8 +113,7 @@ const Checklist = () => {
       },
     )
       .then((response) => response.json())
-      .then((json) => {
-        console.log(json);
+      .then(() => {
         setChecklists(
           checklists.map((checklist) => {
             if (checklist.id === checklistId) {
@@ -358,6 +366,7 @@ const Checklist = () => {
                         <div className="flex gap-2 mt-2">
                           <Input
                             type="text"
+                            value={itemInput}
                             placeholder="新增項目..."
                             name="checklistItem"
                             onChange={(event) =>
@@ -366,6 +375,7 @@ const Checklist = () => {
                             onKeyDown={(event) => {
                               if (event.key === 'Enter') {
                                 addChecklistItem(checklist.id);
+                                setItemInput('');
                               }
                             }}
                             className="bg-gray-100 w-full hover:bg-gray-200"

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useSocket } from '../context/SocketContext';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
@@ -8,13 +7,12 @@ import { ScrollArea } from './ui/scroll-area';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 
-const Chat = ({ attendeeRole }) => {
+const Chat = ({ attendeeRole, socket }) => {
   const [isChatWindowOpen, setIsChatWindowOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
   const [error, setError] = useState(null);
   const [answer, setAnswer] = useState('');
-  const socket = useSocket();
   const { tripId } = useParams();
   const user = JSON.parse(localStorage.getItem('user')) || {};
   const ref = useRef(null);

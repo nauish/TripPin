@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { StarIcon } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 
