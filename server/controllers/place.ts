@@ -1,22 +1,19 @@
 import { Request, Response } from 'express';
 import {
   deletePlace,
-  deleteSavedTrip,
   insertPlace,
-  insertSavedTrip,
   selectPlacesByTripId,
   updatePlace,
   updatePlaceOrder,
 } from '../models/place.js';
-import { ValidationError } from '../middleware/errorHandler.js';
+import { Place } from '../types/trip.js';
+import { ValidationError, handleError } from '../utils/errorHandler.js';
 
 export async function createPlace(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
     const { name, location, markerType, type, note, tripId, dayNumber, address } = req.body;
     const { lat, lng } = location;
-
-    console.log(req.body);
 
     const placeId = await insertPlace({
       user_id: userId,
@@ -32,15 +29,12 @@ export async function createPlace(req: Request, res: Response) {
     });
 
     if (!placeId) {
-      throw new Error('Insert new place failed');
+      throw new ValidationError('新增景點失敗');
     }
 
-    return res.json({ data: { placeId } });
+    res.json({ data: { placeId } });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: 'Something went wrong' });
+    handleError(err, res);
   }
 }
 
@@ -66,14 +60,9 @@ export async function getTripPlaces(req: Request, res: Response) {
       };
     });
 
-    return res.json({ maxDayNumber, data, spending });
+    res.json({ maxDayNumber, data, spending });
   } catch (error) {
-    if (error instanceof ValidationError) return res.status(401).json({ error: error.message });
-    console.error(error);
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: 'Something went wrong' });
+    handleError(error, res);
   }
 }
 
@@ -90,25 +79,9 @@ export async function putPlace(req: Request, res: Response) {
       data.end_hour,
       +data.budget,
     );
-    return res.json({ data: result });
+    res.json({ data: result });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: '出錯了！' });
-  }
-}
-
-export async function putPlaces(req: Request, res: Response) {
-  try {
-    const data = req.body;
-    console.log(data);
-    return res.json({ data });
-  } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: '出錯了！' });
+    handleError(err, res);
   }
 }
 
@@ -119,12 +92,9 @@ export async function deletePlaceFromTrip(req: Request, res: Response) {
 
     if (!result) throw new Error('刪除景點失敗');
 
-    return res.json({ data: { message: '成功刪除' } });
+    res.json({ data: { message: '成功刪除' } });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: 'Something went wrong' });
+    handleError(err, res);
   }
 }
 
@@ -132,58 +102,24 @@ export async function putPlaceOrder(req: Request, res: Response) {
   try {
     const array = req.body;
     await updatePlaceOrder(array);
-    return res.json({ data: { message: '成功更新' } });
+    res.json({ data: { message: '成功更新' } });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: '出錯了' });
+    handleError(err, res);
   }
 }
-
-export async function saveTripByOthers(req: Request, res: Response) {
-  try {
-    const { userId } = res.locals;
-    const { isSaved, tripId } = req.body;
-
-    if (isSaved) {
-      const saved = await insertSavedTrip(userId, +tripId);
-      if (!saved) {
-        throw new Error('儲存景點失敗');
-      }
-      return res.json({ data: { message: '加到收藏成功' } });
-    }
-
-    const isSuccess = await deleteSavedTrip(userId, +tripId);
-    if (!isSuccess) {
-      throw new Error('Delete saved trip failed');
-    }
-    return res.json({ data: { message: '從收藏移除成功' } });
-  } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: '出錯了' });
-  }
-}
-
-type Place = {
-  id: number;
-  longitude: number;
-  latitude: number;
-};
 
 function calculateDistance(place1: Place, place2: Place) {
-  const dx = place2.longitude - place1.longitude;
-  const dy = place2.latitude - place1.latitude;
-  return Math.sqrt(dx * dx + dy * dy);
+  const longitudeDiff = place2.longitude - place1.longitude;
+  const latitudeDiff = place2.latitude - place1.latitude;
+  const distance = Math.sqrt(longitudeDiff ** 2 + latitudeDiff ** 2);
+  return distance;
 }
 
 export function optimizeRoute(places: Place[]): Place[] {
+  if (places.length === 0) return [];
   const unvisitedPlaces = new Set(places);
   const route: Place[] = [];
 
-  // Start from the first place as the current place
   let currentPlace = unvisitedPlaces.values().next().value;
   unvisitedPlaces.delete(currentPlace);
   route.push(currentPlace);
@@ -194,18 +130,16 @@ export function optimizeRoute(places: Place[]): Place[] {
     let shortestDistance = Infinity;
     let secondShortestDistance = Infinity;
 
-    // Find the nearest place
     unvisitedPlaces.forEach((unvisitedPlace) => {
       const distance = calculateDistance(thisPlace, unvisitedPlace);
 
       if (distance < shortestDistance) {
-        // If the distance is shorter than the shortest distance
-        secondNearestPlace = nearestPlace; // The second nearest place is the nearest place
-        nearestPlace = unvisitedPlace; // Set the nearest place to the current place
+        secondNearestPlace = nearestPlace;
+        nearestPlace = unvisitedPlace;
         secondShortestDistance = shortestDistance;
         shortestDistance = distance;
       } else if (distance < secondShortestDistance) {
-        secondNearestPlace = unvisitedPlace; // Set the second nearest place to the current place
+        secondNearestPlace = unvisitedPlace;
         secondShortestDistance = distance;
       }
     });
@@ -236,14 +170,9 @@ export async function optimizingPlaceRoute(req: Request, res: Response) {
   try {
     const places = await selectPlacesByTripId(+req.params.tripId);
     const route = optimizeRoute(places);
-    updatePlaceOrder(route.map((place, index) => ({ id: place.id, order: index })));
-    return res.json({ data: { message: '成功最佳化路線' } });
+    updatePlaceOrder(route.map((place, index) => ({ id: +place.id, order: index })));
+    res.json({ data: { message: '成功最佳化路線' } });
   } catch (error) {
-    if (error instanceof ValidationError) return res.status(401).json({ error: error.message });
-    console.error(error);
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: 'Something went wrong' });
+    handleError(error, res);
   }
 }

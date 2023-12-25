@@ -3,7 +3,7 @@ import { hash, verify } from 'argon2';
 import jwt from 'jsonwebtoken';
 import * as userModel from '../models/user.js';
 import PROVIDER from '../constants/provider.js';
-import { ValidationError } from '../middleware/errorHandler.js';
+import { handleError, ValidationError } from '../utils/errorHandler.js';
 
 function createToken(userId: number, seconds: number) {
   const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -35,7 +35,7 @@ export async function createUser(req: Request, res: Response) {
     const userId = await userModel.insertUser(email, name, PROVIDER.NATIVE, hashedPassword);
 
     const token = await createToken(+userId, expiredIn);
-    return res.status(200).json({
+    res.json({
       data: {
         access_token: token,
         access_expired: expiredIn,
@@ -52,13 +52,9 @@ export async function createUser(req: Request, res: Response) {
     if (err instanceof Error && err.message.includes('duplicate key')) {
       return res.status(400).json({ error: '信箱已經被註冊過' });
     }
-
-    if (err instanceof Error) {
-      return res.status(500).json({ error: err.message });
-    }
-
-    return res.status(500).json({ error: '註冊失敗' });
+    handleError(err, res);
   }
+  return undefined;
 }
 
 export async function loginUser(req: Request, res: Response) {
@@ -75,7 +71,7 @@ export async function loginUser(req: Request, res: Response) {
     }
 
     const token = await createToken(user.id, expiredIn);
-    return res.status(200).json({
+    res.json({
       data: {
         access_token: token,
         access_expired: expiredIn,
@@ -89,13 +85,7 @@ export async function loginUser(req: Request, res: Response) {
       },
     });
   } catch (err) {
-    if (err instanceof ValidationError) {
-      return res.status(400).json({ error: err.message });
-    }
-    if (err instanceof Error) {
-      return res.status(500).json({ error: err.message });
-    }
-    return res.status(500).json({ error: '登入失敗' });
+    handleError(err, res);
   }
 }
 
@@ -103,7 +93,7 @@ export async function getProfile(req: Request, res: Response) {
   try {
     const { userId } = res.locals;
     const user = await userModel.selectUserById(userId);
-    return res.status(200).json({
+    res.json({
       data: {
         provider: user?.provider_name,
         name: user?.name,
@@ -112,8 +102,7 @@ export async function getProfile(req: Request, res: Response) {
       },
     });
   } catch (err) {
-    if (err instanceof Error) return res.status(400).json({ error: err.message });
-    return res.status(500).json({ error: '無法取得個人資料' });
+    handleError(err, res);
   }
 }
 
@@ -122,13 +111,10 @@ export async function putAttendee(req: Request, res: Response) {
     const { userId, role } = req.body;
     const { tripId } = req.params;
     const count = await userModel.updateUserRole(+tripId, +userId, role);
-    if (count === 0) throw new Error('無法修改');
-    return res.status(200).json({ data: { message: '成功修改參加者！' } });
+    if (count === 0) throw new ValidationError('無法修改');
+    res.json({ data: { message: '成功修改參加者！' } });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: '出錯了！' });
+    handleError(err, res);
   }
 }
 
@@ -136,12 +122,10 @@ export async function deleteUserFromTrip(req: Request, res: Response) {
   try {
     const { userId } = req.body;
     const { tripId } = req.params;
-    await userModel.deleteAttendeeFromTrip(+userId, +tripId);
-    return res.status(200).json({ data: { message: '成功刪除參加者！' } });
+    const isDeleted = await userModel.deleteAttendeeFromTrip(+tripId, +userId);
+    if (!isDeleted) throw new ValidationError('無法刪除');
+    res.json({ data: { message: '成功刪除參加者！' } });
   } catch (err) {
-    if (err instanceof Error) {
-      return res.status(400).json({ error: err.message });
-    }
-    return res.status(500).json({ error: 'Something went wrong' });
+    handleError(err, res);
   }
 }

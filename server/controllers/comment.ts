@@ -1,25 +1,22 @@
 import { Request, Response } from 'express';
 import { insertComment, insertCommentPhotos, selectCommentsByTripId } from '../models/comment.js';
 import pool from '../models/dbPools.js';
+import { handleError } from '../utils/errorHandler.js';
 
 export async function getComments(req: Request, res: Response) {
   try {
     const { tripId } = req.params;
     const comments = await selectCommentsByTripId(+tripId);
-    return res.json({
-      data: comments.map((comment: any) => ({
+    res.json({
+      data: comments.map((comment) => ({
         ...comment,
-        photos:
-          comment.photos.length > 0 && comment.photos[0]
-            ? comment.photos.map((photo: string) => `${process.env.CLOUDFRONT_DOMAIN}${photo}`)
-            : [],
+        photos: comment.photos?.[0]
+          ? comment.photos.map((photo: string) => `${process.env.CLOUDFRONT_DOMAIN}${photo}`)
+          : [],
       })),
     });
   } catch (error) {
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: 'Internal server error' });
+    handleError(error, res);
   }
 }
 
@@ -36,18 +33,13 @@ export async function postComment(req: Request, res: Response) {
 
   try {
     await client.query('BEGIN');
-    const commentId = await insertComment(req.body);
-    if (photos && photos.length > 0) {
-      await insertCommentPhotos(commentId, photoFileNames);
-    }
+    const commentId = await insertComment(req.body, client);
+    if (photos && photos.length > 0) await insertCommentPhotos(commentId, photoFileNames, client);
     await client.query('COMMIT');
-    return res.json({ data: { commentId } });
+    res.json({ data: { commentId } });
   } catch (error) {
     await client.query('ROLLBACK');
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: 'Internal server error' });
+    handleError(error, res);
   } finally {
     client.release();
   }

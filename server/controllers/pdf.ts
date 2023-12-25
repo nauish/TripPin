@@ -2,8 +2,8 @@ import PDFDocument from 'pdfkit';
 import { Request, Response } from 'express';
 import { resolve } from 'path';
 import { selectCompleteTripInfo } from '../models/trip.js';
-import { ValidationError } from '../middleware/errorHandler.js';
 import { Place, PlacesByDay } from '../types/trip.js';
+import { handleError, ValidationError } from '../utils/errorHandler.js';
 
 export async function generateTripPDF(req: Request, res: Response) {
   try {
@@ -58,17 +58,18 @@ export async function generateTripPDF(req: Request, res: Response) {
 
     const { GOOGLE_MAP_API_KEY } = process.env;
 
-    // Map places to markers, flatten the array, and join them with '&'
-    const markers = Object.values(placesByDay)
-      .map((placesOfDay: Place[], index) =>
-        placesOfDay.map(
-          (place: Place) =>
-            `&markers=color:red|label:${index + 1}|${place.latitude},${place.longitude}`,
-        ),
-      )
-      .flat()
-      .join('');
+    const placesByDayValues = Object.values(placesByDay);
 
+    const mappedPlaces = placesByDayValues.map((placesOfDay: Place[], index) => {
+      const markersForDay = placesOfDay.map((place: Place) => {
+        const marker = `&markers=color:red|label:${index + 1}|${place.latitude},${place.longitude}`;
+        return marker;
+      });
+
+      return markersForDay;
+    });
+
+    const markers = mappedPlaces.flat().join('');
     const baseStaticMapUrl =
       'https://maps.googleapis.com/maps/api/staticmap?size=600x600&maptype=roadmap';
     const googleStaticMapUrl = `${baseStaticMapUrl}${markers}&path=color:0x0000ff|weight:5&key=${GOOGLE_MAP_API_KEY}`;
@@ -105,13 +106,9 @@ export async function generateTripPDF(req: Request, res: Response) {
 
     doc.pipe(res);
     doc.end();
-    return null;
   } catch (error) {
-    if (error instanceof ValidationError) return res.status(401).json({ error: error.message });
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: '無法產生PDF' });
+    handleError(error, res);
   }
+  return undefined;
 }
 export default generateTripPDF;
