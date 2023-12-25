@@ -1,7 +1,7 @@
 import { DialogTrigger } from '@radix-ui/react-dialog';
 import { Dialog, DialogContent } from './ui/dialog';
 import { Button } from './ui/button';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { Input } from './ui/input';
 import { CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';

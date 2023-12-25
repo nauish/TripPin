@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Menu } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogHeader,
@@ -41,7 +41,7 @@ const TripOptionButton = ({ trip, className }) => {
       .then((json) => {
         if (json.data.message) {
           toast.success(json.data.message, {
-            autoClose: 1000,
+            duration: 1000,
           });
           setTimeout(() => {
             window.location.reload();
@@ -77,7 +77,7 @@ const TripOptionButton = ({ trip, className }) => {
       .then((json) => {
         if (json.data.message) {
           toast.success(json.data.message, {
-            autoClose: 1000,
+            duration: 1000,
           });
           setTimeout(() => {
             window.location.reload();

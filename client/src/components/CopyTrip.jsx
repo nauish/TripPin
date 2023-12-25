@@ -1,4 +1,4 @@
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,18 +10,13 @@ const CopyTrip = ({ TRIP_API_URL }) => {
   const copyTrip = async () => {
     setIsLoading(true);
     try {
-      const response = await toast.promise(
-        fetch(`${TRIP_API_URL}/places`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-        }),
-        {
-          pending: '複製中...',
+      const response = await fetch(`${TRIP_API_URL}/places`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
-      );
+      });
 
       const json = await response.json();
 

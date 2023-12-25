@@ -1,7 +1,7 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import Loading from './Loading';
 import { Button } from './ui/button';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { UserCircle } from 'lucide-react';
 
 const SignOutButton = () => {
@@ -10,7 +10,7 @@ const SignOutButton = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     toast.warning('您已登出！', {
-      autoClose: 2000,
+      duration: 2000,
     });
     navigate('/');
   };
