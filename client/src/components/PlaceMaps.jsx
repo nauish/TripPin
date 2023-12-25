@@ -1,10 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
-import { useSocket } from '../context/SocketContext';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import { formatDate, formatBudget, debounce } from '@/lib/utils';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import useMapApi from '@/hooks/useMapApi';
 import Comment from './Comment';
@@ -35,6 +34,7 @@ import TripOptionButton from './TripOptionButton';
 import Checklist from './Checklist';
 import OptimizeRouteButton from './OptimizeRoute';
 import Chat from './Chat';
+import { io } from 'socket.io-client';
 
 const reorder = (list, startIndex, end) => {
   const result = Array.from(list);
@@ -67,8 +67,8 @@ const PlacesMaps = () => {
   const [size, setSize] = useState(390);
   const [dragging, setDragging] = useState(false);
   const { tripId } = useParams();
-  const socket = useSocket();
   const navigate = useNavigate();
+  const [socket, setSocket] = useState(null);
   const autocompleteRef = useRef(null);
   const [attendeeRole, setAttendeeRole] = useState(null);
   const TRIP_API_URL = `${
@@ -77,119 +77,130 @@ const PlacesMaps = () => {
   const Authorization = `Bearer ${localStorage.getItem('accessToken')}`;
 
   useEffect(() => {
-    // Fetch trip information, redirect if private trip
-    fetch(TRIP_API_URL, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-      },
-    })
-      .then((response) => {
+    const fetchTripInfo = async () => {
+      try {
+        const response = await fetch(TRIP_API_URL, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+
         if (response.status === 400) {
           toast.error('您無權限瀏覽此行程，請登入或聯繫行程發起人');
           navigate(`/user/trips`);
           return;
         }
-        return response.json();
-      })
-      .then((json) => {
+
+        const json = await response.json();
         setTrip(json.data[0]);
-      })
-      .catch((error) => {
+
+        await fetch(`${TRIP_API_URL}/clicks`, {
+          method: 'POST',
+        });
+      } catch (error) {
         console.log(error);
-      });
+      }
+    };
 
+    fetchTripInfo();
     fetchAttendees();
-
-    // Add click count
-    fetch(`${TRIP_API_URL}/clicks`, {
-      method: 'POST',
-    });
 
     return () => {
       if (!socket) return;
       socket.off('newEditLock');
       socket.off('newEditUnlock');
+      socket.disconnect();
     };
   }, []);
 
-  const fetchAttendees = () => {
-    // Check if user is attendee
+  const fetchAttendees = async () => {
     if (!user) return;
-    fetch(`${TRIP_API_URL}/attendees`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        const { attendees } = json;
-        setAttendees(attendees);
-        const attendee = attendees.find((attendee) => +attendee.id === user.id);
-        setAttendeeRole(attendee?.role);
-
-        if (attendee?.role === 'attendee') {
-          if (!socket) return;
-          socket.emit('newUserInRoom', { name: user.name, room: tripId });
-          socket.on('getRoomLocks', (payload) => {
-            setLockedPlaces(
-              payload.locks.map((lock) => ({
-                name: lock.name,
-                placeId: lock.placeId,
-              })),
-            );
-          });
-          socket.emit('getRoomLocks', { room: tripId });
-          socket.on('newEditLock', ({ name, userId, placeId }) => {
-            setLockedPlaces((prev) => [...prev, { name, userId, placeId }]);
-          });
-          socket.on('newEditUnlock', ({ placeId }) => {
-            setLockedPlaces((prev) =>
-              prev.filter((lock) => lock.placeId !== placeId),
-            );
-          });
-          socket.on('userDisconnected', (payload) => {
-            setLockedPlaces((prev) =>
-              prev.filter((lock) => lock.userId !== payload.userId),
-            );
-            console.log(lockedPlaces);
-          });
-        }
-      })
-      .catch((error) => {
-        console.log(error);
+    try {
+      const response = await fetch(`${TRIP_API_URL}/attendees`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
       });
+
+      const json = await response.json();
+      const { attendees } = json;
+      setAttendees(attendees);
+      const attendee = attendees.find((attendee) => +attendee.id === user.id);
+      setAttendeeRole(attendee?.role);
+
+      if (attendee?.role !== 'attendee') return;
+
+      const socket = io(import.meta.env.VITE_BACKEND_HOST, {
+        auth: {
+          token: localStorage.getItem('accessToken'),
+        },
+      });
+
+      if (!socket) return;
+
+      setSocket(socket);
+      socket.emit('newUserInRoom', { name: user.name, room: tripId });
+      socket.on('getRoomLocks', (payload) => {
+        setLockedPlaces(
+          payload.locks.map((lock) => ({
+            name: lock.name,
+            placeId: lock.placeId,
+          })),
+        );
+      });
+      socket.emit('getRoomLocks', { room: tripId });
+      socket.on('newEditLock', ({ name, userId, placeId }) => {
+        setLockedPlaces((prev) => [...prev, { name, userId, placeId }]);
+      });
+      socket.on('newEditUnlock', ({ placeId }) => {
+        setLockedPlaces((prev) =>
+          prev.filter((lock) => lock.placeId !== placeId),
+        );
+      });
+      socket.on('userDisconnected', (payload) => {
+        setLockedPlaces((prev) =>
+          prev.filter((lock) => lock.userId !== payload.userId),
+        );
+        console.log(lockedPlaces);
+      });
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const fetchPlaces = () => {
-    fetch(`${TRIP_API_URL}/places`, {
-      headers: {
-        Authorization,
-      },
-    })
-      .then((response) => {
-        if (response.status === 401) {
-          toast.error('您無權限瀏覽此行程');
-          navigate(`/users/${user.id}/trips`);
-        }
-        return response.json();
-      })
-      .then((json) => {
-        if (json.error) throw new Error(json.error);
-
-        const maxDayNumber = json.maxDayNumber;
-
-        if (maxDayNumber <= 0) {
-          setData([{ dayNumber: 1, places: [] }]);
-          return;
-        }
-        setSpending(json.spending);
-        setData(json.data);
-        return json.data;
-      })
-      .catch((error) => {
-        console.log(error);
+  const fetchPlaces = async () => {
+    try {
+      const response = await fetch(`${TRIP_API_URL}/places`, {
+        headers: {
+          Authorization,
+        },
       });
+
+      if (response.status === 401) {
+        toast.error('您無權限瀏覽此行程');
+        navigate(`/users/${user.id}/trips`);
+        return;
+      }
+
+      const json = await response.json();
+      if (json.error) throw new Error(json.error);
+
+      const maxDayNumber = json.maxDayNumber;
+      if (maxDayNumber <= 0) {
+        setData([{ dayNumber: 1, places: [] }]);
+        return;
+      }
+
+      setSpending(json.spending);
+      setData(json.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  useEffect(() => {
+    fetchPlaces();
+  }, []);
 
   useEffect(() => {
     if (window.innerWidth <= 768) {
@@ -203,20 +214,13 @@ const PlacesMaps = () => {
       if (window.innerWidth <= 768) {
         setSize('100%');
         setIsMapVisible(false);
-      } else {
-        setSize(550);
-      }
+      } else setSize(550);
     }, 150);
 
     window.addEventListener('resize', handleResize);
-
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
-
-  useEffect(() => {
-    fetchPlaces();
   }, []);
 
   const loader = new Loader({
@@ -226,7 +230,6 @@ const PlacesMaps = () => {
 
   useEffect(() => {
     if (!Marker) return;
-    // Load Google Libraries
     const initMap = async () => {
       const [mapsLib, placesLib, geometryLib] = await Promise.all([
         loader.importLibrary('maps'),
@@ -244,6 +247,7 @@ const PlacesMaps = () => {
         strokeOpacity: 1.0,
         strokeWeight: 3,
       });
+
       polyline.setMap(map);
 
       const autocomplete = new placesLib.Autocomplete(autocompleteRef.current, {
@@ -257,25 +261,22 @@ const PlacesMaps = () => {
       const service = new placesLib.PlacesService(map);
 
       map.addListener('click', (location) => {
-        setClickLocation(location.latLng.toJSON());
+        const { placeId, latLng } = location;
+        setClickLocation(latLng.toJSON());
 
-        const request = {
-          placeId: location.placeId,
-        };
-
-        service.getDetails(request, (place, status) => {
-          if (status === 'OK') {
-            console.log(place);
-            setSearchResults((prev) => [...prev, place]);
-          }
+        if (!placeId) return;
+        service.getDetails({ placeId }, (place, status) => {
+          if (status === 'OK') setSearchResults((prev) => [...prev, place]);
         });
       });
 
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
-        console.log(place);
-        if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
-        else map.setCenter(place.geometry.location);
+        const { viewport, location } = place.geometry;
+
+        viewport
+          ? map.fitBounds(place.geometry.viewport)
+          : map.setCenter(location);
 
         new Marker({
           map: map,
@@ -292,10 +293,7 @@ const PlacesMaps = () => {
       setGeometry(geometryLib);
 
       if (!socket) return;
-      socket.on('addNewPlaceToTrip', () => {
-        fetchPlaces();
-      });
-
+      socket.on('addNewPlaceToTrip', () => fetchPlaces());
       socket.on('getMarker', (data) => {
         toast.info('有人送來地點');
         new Marker({
@@ -311,6 +309,7 @@ const PlacesMaps = () => {
     return () => {
       if (!socket) return;
       socket.off('getMarker');
+      socket.off('addNewPlaceToTrip');
     };
   }, [Marker]);
 
@@ -407,17 +406,14 @@ const PlacesMaps = () => {
       map: map,
     });
 
-    if (!socket) return;
-    socket.emit('getMarker', {
-      room: tripId,
-      latLng: { lat: clickLocation.lat, lng: clickLocation.lng },
-    });
+    socket &&
+      socket.emit('getMarker', {
+        room: tripId,
+        latLng: { lat: clickLocation.lat, lng: clickLocation.lng },
+      });
   };
 
-  const setCenter = (latLng) => {
-    map.setCenter(latLng);
-  };
-
+  const setCenter = (latLng) => map.setCenter(latLng);
   const handleNearbySearch = (map, place) => {
     const request = {
       location: place.geometry.location,
@@ -470,8 +466,7 @@ const PlacesMaps = () => {
     if (response.status === 200) {
       fetchPlaces();
       toast.success('已新增景點');
-      if (!socket) return;
-      socket.emit('addNewPlaceToTrip', { room: tripId });
+      socket && socket.emit('addNewPlaceToTrip', { room: tripId });
     }
   };
 
@@ -512,7 +507,6 @@ const PlacesMaps = () => {
     )
       return;
 
-    // If user drag the place from the search results
     if (source.droppableId === 'searchResults') {
       if (destination.droppableId === 'searchResults') return;
       addPlaceToTrip({
@@ -576,7 +570,6 @@ const PlacesMaps = () => {
         updateData(movedPlace, movedPlace.id);
         // Add the moved card to the destination list
         destList.places.splice(destination.index, 0, movedPlace);
-
         sourceList.places.forEach((place, idx) => (place.order = idx));
         destList.places.forEach((place, idx) => (place.order = idx));
         updateItemOrders(destList.places);
@@ -637,10 +630,6 @@ const PlacesMaps = () => {
     }
   };
 
-  const handleAddAttendee = () => {
-    fetchAttendees();
-  };
-
   const handleRemoveAttendee = (removedAttendeeId) => {
     setAttendees(
       attendees.filter((attendee) => attendee.id !== removedAttendeeId),
@@ -696,7 +685,7 @@ const PlacesMaps = () => {
                           tripId={tripId}
                           attendees={attendees}
                           tripCreator={trip.user_id}
-                          onAttendeeAdd={handleAddAttendee}
+                          onAttendeeAdd={fetchAttendees}
                           onAttendeeRemove={handleRemoveAttendee}
                         />
                       )}
@@ -783,7 +772,7 @@ const PlacesMaps = () => {
               setClickLocation={setClickLocation}
               size={size}
             />
-            <Checklist user={user} />
+            {<Checklist user={user} attendeeRole={attendeeRole} />}
 
             <div className="flex justify-between mx-16 mt-10">
               <h2 className="text-2xl font-bold pb-2">目前景點</h2>
@@ -930,7 +919,7 @@ const PlacesMaps = () => {
             </Button>
           )}
 
-          <Chat attendeeRole={attendeeRole} />
+          <Chat attendeeRole={attendeeRole} socket={socket} />
         </div>
         <div ref={mapRef} style={{ height: '100vh' }} id="map" />
       </div>
