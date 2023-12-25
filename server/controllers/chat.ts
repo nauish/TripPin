@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
 import OpenAI from 'openai';
+import { Request, Response } from 'express';
 import { insertChat } from '../models/chat.js';
-import getSocketIOInstance from './socket.js';
 import { selectCompleteTripInfo } from '../models/trip.js';
+import getSocketIOInstance from './socket.js';
+import { handleError } from '../utils/errorHandler.js';
 
 export async function getChatCompletion(req: Request, res: Response) {
   const { tripId } = req.params;
@@ -18,8 +19,6 @@ export async function getChatCompletion(req: Request, res: Response) {
     The current trip arrangement user made is as followed: ${JSON.stringify(additionalInformation)}
     List out other fun and popular attractions.
     `;
-
-  console.log(systemContent);
 
   try {
     const stream = await client.chat.completions.create({
@@ -49,13 +48,12 @@ export async function getChatCompletion(req: Request, res: Response) {
     const fullMessage = chunk.join('');
 
     const io = getSocketIOInstance();
-    io.sockets
-      .to(req.params.tripId)
-      .emit('newChatMessage', { name: 'AI小助手', message: fullMessage });
 
-    await insertChat(fullMessage, +req.params.tripId, 4);
+    io.sockets.to(tripId).emit('newChatMessage', { name: 'AI小助手', message: fullMessage });
+
+    await insertChat(fullMessage, Number(tripId), Number(process.env.AI_USER_ID));
   } catch (error) {
-    console.log(error);
+    handleError(error, res);
   }
 }
 
