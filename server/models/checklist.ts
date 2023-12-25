@@ -1,6 +1,20 @@
+import { z } from 'zod';
 import pool from './dbPools.js';
 
-export async function insertChecklist(name: string, tripId: number) {
+const ItemSchema = z.object({
+  id: z.coerce.number(),
+  name: z.string(),
+  isChecked: z.boolean(),
+  order: z.number(),
+});
+
+const ChecklistSchema = z.object({
+  id: z.coerce.number(),
+  name: z.string(),
+  items: z.array(ItemSchema),
+});
+
+export async function insertChecklist(name: string, tripId: number): Promise<string> {
   const results = await pool.query(
     `
     INSERT INTO checklists (name, trip_id)
@@ -15,21 +29,21 @@ export async function insertChecklist(name: string, tripId: number) {
 export async function selectChecklistsByTripId(tripId: number) {
   const results = await pool.query(
     `
-    SELECT  c.id as checklist_id,
-            c.name AS checklist_name,
-            ci.id AS item_id,
-            ci.name AS item_name,
-            ci.is_checked,
-            ci.item_order
-    FROM checklists c
-    LEFT JOIN checklist_items ci
-    ON c.id = ci.checklist_id 
-    WHERE trip_id = $1
-    `,
+      SELECT  c.id as checklist_id,
+              c.name AS checklist_name,
+              ci.id AS item_id,
+              ci.name AS item_name,
+              ci.is_checked,
+              ci.item_order
+      FROM checklists c
+      LEFT JOIN checklist_items ci
+      ON c.id = ci.checklist_id 
+      WHERE trip_id = $1
+      `,
     [tripId],
   );
 
-  const nestedChecklists: { [key: number]: any } = {};
+  const nestedChecklists: { [key: string]: z.infer<typeof ChecklistSchema> } = {};
 
   results.rows.forEach((row) => {
     if (!nestedChecklists[row.checklist_id]) {
@@ -50,7 +64,6 @@ export async function selectChecklistsByTripId(tripId: number) {
     }
   });
 
-  // Convert the object to an array of checklists
   return Object.values(nestedChecklists);
 }
 
@@ -64,7 +77,7 @@ export async function selectChecklistById(checklistId: number) {
     [checklistId],
   );
 
-  return results.rows;
+  return results.rows as z.infer<typeof ChecklistSchema>[];
 }
 
 export async function updateChecklist(name: string, checklistId: number) {
@@ -101,7 +114,7 @@ export async function insertChecklistItem(name: string, checklistId: number, ord
     [name, checklistId, order],
   );
 
-  return results.rows;
+  return results.rows as z.infer<typeof ItemSchema>[];
 }
 
 export async function selectChecklistItemsByChecklistId(checklistId: number) {
@@ -114,7 +127,7 @@ export async function selectChecklistItemsByChecklistId(checklistId: number) {
     [checklistId],
   );
 
-  return results.rows;
+  return results.rows as z.infer<typeof ItemSchema>[];
 }
 
 export async function updateChecklistItem(
@@ -131,7 +144,7 @@ export async function updateChecklistItem(
     [name, isChecked, checklistItemId],
   );
 
-  return results.rows;
+  return results.rows as z.infer<typeof ItemSchema>[];
 }
 
 export async function deleteChecklistItem(checklistItemId: number) {
