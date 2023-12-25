@@ -13,9 +13,11 @@ export interface Place {
   marker_type: string;
   start_hour: string;
   end_hour: string;
+  location: string;
   longitude: number;
   latitude: number;
   address: string;
+  budget: number;
   distance_from_previous: number;
 }
 
@@ -37,3 +39,8 @@ export interface Trip {
 export interface PlacesByDay {
   [dayNumber: number]: Place[];
 }
+
+export type Lock = {
+  placeId: string;
+  name: string | null;
+};
