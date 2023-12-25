@@ -39,7 +39,6 @@ import { deleteUserFromTrip, putAttendee } from '../controllers/user.js';
 const router = Router();
 
 router.route('/v1/trips').get([getPublicTrips]).post([authenticateJWT, createTrip]);
-
 router
   .route('/v1/trips/:tripId')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getTrip])
