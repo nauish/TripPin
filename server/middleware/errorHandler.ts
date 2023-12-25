@@ -1,22 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
+import { handleError } from '../utils/errorHandler.js';
 
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.message = message;
-    this.name = 'ValidationError';
-  }
+function errorHandlerMiddleware(err: Error, req: Request, res: Response, next: NextFunction) {
+  handleError(err, res);
+  next();
 }
 
-export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
-  // eslint-disable-next-line no-console
-  console.error(err);
-  if (err instanceof ValidationError) {
-    return res.status(400).json({ error: err.message });
-  }
-  if (err instanceof Error) {
-    return res.status(500).json({ error: err.message });
-  }
-  res.status(500).json({ error: '內部伺服器出錯' });
-  return next();
-}
+export default errorHandlerMiddleware;

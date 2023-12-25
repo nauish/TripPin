@@ -4,9 +4,12 @@
     "fieldname",
     "googlemaps",
     "linebreak",
+    "lucide",
     "openai",
     "pangea",
+    "signup",
     "socketio",
-    "toastify"
+    "sonner",
+    "unnest"
   ]
 }

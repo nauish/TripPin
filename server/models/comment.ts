@@ -1,18 +1,19 @@
+import { PoolClient } from 'pg';
 import { z } from 'zod';
 import pool from './dbPools.js';
 
-const Comment = z.object({
+export const Comment = z.object({
   id: z.coerce.number(),
   user_id: z.coerce.number(),
-  trip_id: z.coerce.number().optional(),
+  trip_id: z.coerce.number(),
   username: z.string().optional(),
-  comment: z.string(),
-  rating: z.number(),
+  comment: z.string().optional(),
+  rating: z.number().optional(),
   photos: z.array(z.string()).optional(),
   created_at: z.coerce.date(),
 });
 
-export async function selectCommentsByTripId(tripId: number) {
+export async function selectCommentsByTripId(tripId: number): Promise<z.infer<typeof Comment>[]> {
   const results = await pool.query(
     `
     SELECT
@@ -44,8 +45,8 @@ export async function selectCommentsByTripId(tripId: number) {
   return Object.values(groupedResults);
 }
 
-export async function insertComment(comment: z.infer<typeof Comment>) {
-  const results = await pool.query(
+export async function insertComment(comment: z.infer<typeof Comment>, transaction?: PoolClient) {
+  const results = await (transaction ?? pool).query(
     `
     INSERT INTO trip_comments (user_id, trip_id, comment, rating)
     VALUES ($1, $2, $3, $4)
@@ -56,10 +57,14 @@ export async function insertComment(comment: z.infer<typeof Comment>) {
   return results.rows[0].id;
 }
 
-export async function insertCommentPhotos(commentId: number, photos: string[]) {
+export async function insertCommentPhotos(
+  commentId: number,
+  photos: string[],
+  transaction?: PoolClient,
+) {
   const params = [Array(photos.length).fill(commentId), photos];
 
-  const results = await pool.query(
+  const results = await (transaction ?? pool).query(
     `
     INSERT INTO trip_comment_photos (trip_comment_id, photo)
     SELECT * FROM unnest($1::integer[], $2::text[])

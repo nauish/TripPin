@@ -1,0 +1,27 @@
+name: Deploy server to AWS EC2 on merge
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'server/**/*'
+
+jobs:
+  build_and_deploy_on_EC2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/repos/TripPin/server
+            git checkout develop
+            git pull
+            docker rm -f $(docker ps -a -q)
+            docker build -t trippin-server .
+            docker container run -d --network host --env-file .env-docker trippin-server:latest

@@ -5,6 +5,7 @@ const ChatSchema = z.object({
   message: z.string(),
   user_id: z.coerce.number(),
   name: z.string(),
+  timestamp: z.date(),
 });
 
 export async function insertChat(message: string, tripId: number, userId: number) {
@@ -16,13 +17,13 @@ export async function insertChat(message: string, tripId: number, userId: number
     [message, userId, tripId],
   );
 
-  return results.rows;
+  return results.rows[0];
 }
 
 export async function selectChatByTripId(tripId: number) {
   const results = await pool.query(
     `
-    SELECT u.id as user_id, u.name, message 
+    SELECT u.id as user_id, u.name, message, cm.timestamp
     FROM chat_messages cm
     INNER JOIN users u ON cm.user_id = u.id
     WHERE trip_id = $1
@@ -31,6 +32,5 @@ export async function selectChatByTripId(tripId: number) {
     [tripId],
   );
 
-  const result = z.array(ChatSchema).parse(results.rows);
-  return result;
+  return z.array(ChatSchema).parse(results.rows);
 }

@@ -1,20 +1,8 @@
+import { Place } from '../types/trip.js';
+import { ValidationError } from '../utils/errorHandler.js';
 import pool from './dbPools.js';
 
-/**
- * CREATE TABLE places (
-  id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  location GEOGRAPHY(POINT, 4326) NOT NULL,
-  marker_type VARCHAR(10) NOT NULL,
-  type VARCHAR(50) NOT NULL,
-  note TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
- */
-
-export async function insertPlace(place: {
+type PlaceInput = {
   user_id: number;
   trip_id: number;
   day_number: number;
@@ -24,12 +12,28 @@ export async function insertPlace(place: {
   marker_type: string;
   type?: string;
   note?: string;
-  start_hour?: number;
-  end_hour?: number;
-  tag?: number[];
+  start_hour?: string;
+  end_hour?: string;
+  tag?: string;
   address: string;
-}) {
-  const coordinates = `POINT (${place.longitude} ${place.latitude})`;
+};
+
+export async function insertPlace({
+  user_id,
+  trip_id,
+  day_number,
+  name,
+  longitude,
+  latitude,
+  marker_type,
+  type,
+  note,
+  start_hour,
+  end_hour,
+  tag,
+  address,
+}: PlaceInput) {
+  const coordinates = `POINT (${longitude} ${latitude})`;
   const results = await pool.query(
     `
     INSERT INTO places (
@@ -49,18 +53,18 @@ export async function insertPlace(place: {
     VALUES ($1, $2, $3, $4, ST_GeographyFromText($5), $6, $7, $8, $9, $10, $11, $12) RETURNING id
   `,
     [
-      place.user_id,
-      place.trip_id,
-      place.day_number,
-      place.name,
+      user_id,
+      trip_id,
+      day_number,
+      name,
       coordinates,
-      place.marker_type,
-      place.type,
-      place.note,
-      place.start_hour,
-      place.end_hour,
-      place.tag,
-      place.address,
+      marker_type,
+      type,
+      note,
+      start_hour,
+      end_hour,
+      tag,
+      address,
     ],
   );
   const placeId = results.rows[0].id;
@@ -68,7 +72,8 @@ export async function insertPlace(place: {
   throw new Error('Insert new place failed');
 }
 
-export async function selectPlacesByTripId(TripId: number) {
+export async function selectPlacesByTripId(tripId: number): Promise<Place[]> {
+  if (Number.isNaN(tripId)) throw new ValidationError('Invalid trip id');
   const results = await pool.query(
     `
       SELECT
@@ -83,7 +88,7 @@ export async function selectPlacesByTripId(TripId: number) {
       FROM places p
       WHERE p.trip_id = $1
     `,
-    [TripId],
+    [tripId],
   );
 
   return results.rows;
@@ -98,6 +103,7 @@ export async function updatePlace(
   end_hour: number,
   budget: number,
 ) {
+  if (Number.isNaN(placeId)) throw new ValidationError('Invalid place id');
   const results = await pool.query(
     `
     UPDATE places
@@ -148,30 +154,4 @@ export async function updatePlaceOrder(array: { order: number; id: number }[]) {
 
   if (results) return results.rowCount;
   throw new Error('更新地點失敗');
-}
-
-export async function insertSavedTrip(userId: number, tripId: number) {
-  const results = await pool.query(
-    `
-    INSERT INTO saved_trips (user_id, trip_id)
-    VALUES ($1, $2)
-    RETURNING trip_id
-  `,
-    [userId, tripId],
-  );
-  const result = results.rows[0];
-  if (result) return result;
-  throw new Error('Insert trip save failed');
-}
-
-export async function deleteSavedTrip(userId: number, tripId: number) {
-  const command = await pool.query(
-    `
-    DELETE FROM saved_trips WHERE user_id = $1 AND trip_id = $2
-    `,
-    [userId, tripId],
-  );
-
-  if (command.rowCount === 0) return false;
-  return true;
 }

@@ -1,12 +1,12 @@
 import { config } from 'dotenv';
-import { Redis } from 'ioredis';
+import { Redis, RedisOptions } from 'ioredis';
 
 config();
 
 let redis: Redis | null = null;
 
-export function initCache(): Redis {
-  const redisOptions: { host: string | undefined; password: string | undefined; tls?: object } = {
+export function initCache() {
+  const redisOptions: RedisOptions = {
     host: process.env.REDIS_HOST,
     password: process.env.REDIS_PASSWORD,
   };

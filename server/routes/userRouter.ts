@@ -5,13 +5,12 @@ import {
   getTripsAttendedByUser,
   getTripsCreatedByUser,
   getTripsSavedByUser,
+  saveTripByOthers,
 } from '../controllers/trip.js';
-import { saveTripByOthers } from '../controllers/place.js';
 
 const router = Router();
 
 router.route('/v1/users/profile').get([authenticateJWT, getProfile]);
-
 router.route('/v1/users/:userId/trips').get([authenticateJWTOptional, getTripsCreatedByUser]);
 router
   .route('/v1/users/:userId/trips/saved')

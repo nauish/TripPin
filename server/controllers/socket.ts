@@ -1,16 +1,14 @@
-import { Socket, Server } from 'socket.io';
+import { ServerOptions, Socket, Server as SocketServer } from 'socket.io';
+import { Server as HttpServer } from 'http';
 import { insertChat } from '../models/chat.js';
 import { getCacheInstance } from '../models/cache.js';
 import { verifyJWT } from '../middleware/authentication.js';
+import { Lock } from '../types/trip.js';
 
-let io: Server;
-const cache = getCacheInstance();
+let io: SocketServer;
 
-function socketEvents(socket: Socket) {
-  const { userId } = socket.data;
-
+function handleGeneralSocketEvents(socket: Socket, userId: number) {
   socket.on('newUserInRoom', (payload) => {
-    console.log('newUserInRoom', payload);
     socket.join(payload.room);
   });
 
@@ -22,11 +20,10 @@ function socketEvents(socket: Socket) {
     try {
       await insertChat(payload.message, payload.room, payload.user_id);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   });
 
-  // Synchronize marking markers on map
   socket.on('getMarker', async (payload) => {
     socket.to(payload.room).emit('getMarker', { room: payload.room, latLng: payload.latLng });
   });
@@ -34,23 +31,32 @@ function socketEvents(socket: Socket) {
     socket.to(payload.room).emit('addNewPlaceToTrip', true);
   });
 
+  socket.on('disconnecting', () => {
+    const rooms = socket.rooms.keys();
+    rooms.next(); // Skip the first key
+    const room = rooms.next().value;
+    socket.to(room).emit('userDisconnected', { userId });
+  });
+}
+
+function handleLocks(socket: Socket, userId: number) {
   socket.on('getRoomLocks', async (payload) => {
     const { room } = payload;
     const lockKey = `editLock:${room}:*`;
     try {
-      const locks: any[] = [];
-      const lockKeys = await cache.keys(lockKey); // key: editLock:room:placeId, value: name
-      let lockValues: any[] = [];
-      if (lockKeys.length > 0) {
-        lockValues = await cache.mget(...lockKeys);
-      }
+      const locks: Lock[] = [];
+      const cache = getCacheInstance();
+
+      if (!cache) throw new Error('Redis is down');
+      const lockKeys = await cache.keys(lockKey);
+      let lockValues: (string | null)[];
+      if (lockKeys.length > 0) lockValues = await cache.mget(...lockKeys);
       lockKeys.forEach((key, index) => {
         const placeId = key.split(':')[2];
         locks.push({ placeId, name: lockValues[index] });
       });
       io.to(socket.id).emit('getRoomLocks', { locks });
     } catch (error) {
-      console.error('Redis is down:', error);
       io.to(socket.id).emit('getRoomLocks', { locks: [] });
     }
   });
@@ -61,24 +67,34 @@ function socketEvents(socket: Socket) {
     const LOCK_EXPIRE_TIME = 60;
 
     try {
-      const isLockAcquired = await cache.set(lockKey, name, 'EX', LOCK_EXPIRE_TIME, 'NX');
-      if (isLockAcquired) {
-        io.sockets.to(room).emit('newEditLock', { name, userId, placeId });
+      const cache = getCacheInstance();
+      if (!cache) throw new Error('Redis is down');
 
-        setTimeout(async () => {
-          try {
-            cache.del(lockKey);
-            io.sockets.to(room).emit('newEditUnlock', { placeId });
-          } catch (error) {
-            console.error('Redis is down:', error);
-          }
-        }, LOCK_EXPIRE_TIME * 1000);
+      const isLockAcquired = await cache.set(lockKey, name, 'EX', LOCK_EXPIRE_TIME, 'NX');
+      if (!isLockAcquired) {
+        io.sockets.to(room).emit('newEditLock', {});
         return;
       }
-      io.sockets.to(room).emit('newEditLock', {});
+
+      io.sockets.to(room).emit('newEditLock', { name, userId, placeId });
     } catch (error) {
       console.error('Redis is down:', error);
       io.sockets.to(room).emit('newEditLock', { name, userId, placeId });
+    }
+  });
+
+  socket.on('extendEditLock', async (payload) => {
+    const { room, placeId } = payload;
+    console.log('extendEditLock', payload);
+    const lockKey = `editLock:${room}:${placeId}`;
+    const LOCK_EXPIRE_TIME = 60;
+
+    try {
+      const cache = getCacheInstance();
+      if (!cache) throw new Error('Redis is down');
+      await cache.expire(lockKey, LOCK_EXPIRE_TIME);
+    } catch (error) {
+      console.error('Redis is down:', error);
     }
   });
 
@@ -87,6 +103,8 @@ function socketEvents(socket: Socket) {
     const lockKey = `editLock:${room}:${placeId}`;
 
     try {
+      const cache = getCacheInstance();
+      if (!cache) throw new Error('Redis is down');
       await cache.del(lockKey);
     } catch (error) {
       console.error('Redis is down:', error);
@@ -103,15 +121,14 @@ function socketEvents(socket: Socket) {
   });
 }
 
-export function initSocketIO(server: any, options?: any) {
-  io = new Server(server, options);
+export function initSocketIO(server: HttpServer, options?: Partial<ServerOptions>) {
+  io = new SocketServer(server, options);
   io.use(async (socket, next) => {
     try {
       const { token } = socket.handshake.auth;
-      if (!token) return next(new Error('Authentication error'));
+      const decoded = token && (await verifyJWT(token));
 
-      const decoded = await verifyJWT(token);
-      if (!decoded) return next(new Error('Authentication error'));
+      if (!token || !decoded) return next(new Error('Authentication error'));
 
       // eslint-disable-next-line no-param-reassign
       socket.data = decoded;
@@ -122,7 +139,9 @@ export function initSocketIO(server: any, options?: any) {
   });
 
   io.on('connection', (socket) => {
-    socketEvents(socket);
+    const { userId } = socket.data;
+    handleGeneralSocketEvents(socket, userId);
+    handleLocks(socket, userId);
   });
   return io;
 }

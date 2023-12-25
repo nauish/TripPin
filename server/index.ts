@@ -4,7 +4,7 @@ import cors from 'cors';
 import userRouter from './routes/userRouter.js';
 import authRouter from './routes/authRouter.js';
 import tripRouter from './routes/tripRouter.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import errorHandler from './middleware/errorHandler.js';
 import { initSocketIO } from './controllers/socket.js';
 import rateLimiter from './middleware/rateLimiter.js';
 
@@ -20,10 +20,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static('./uploads'));
-app.use('/', express.static('./public'));
 
 app.use('/api', rateLimiter, [userRouter, tripRouter, authRouter]);
-
 app.use(errorHandler);
 
 const port = process.env.PORT || 3000;

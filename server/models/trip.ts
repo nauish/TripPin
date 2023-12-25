@@ -1,37 +1,42 @@
+import { PoolClient } from 'pg';
 import PRIVACY_SETTING from '../constants/privacySetting.js';
 import { Trip } from '../types/trip.js';
 import pool from './dbPools.js';
 
-export async function insertTrip(trip: {
-  user_id: number;
-  name: string;
-  destination?: string;
-  start_date?: Date;
-  end_date?: Date;
-  budget?: number;
-  type?: string;
-  privacy_setting: string;
-  note?: string;
-  photo?: string;
-}) {
-  const results = await pool.query(
-    `
-    INSERT INTO trips (user_id, name, destination, start_date, end_date, budget, type, privacy_setting, note, photo)
-    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
-  `,
-    [
-      trip.user_id,
-      trip.name,
-      trip.destination,
-      trip.start_date,
-      trip.end_date,
-      trip.budget,
-      trip.type,
-      trip.privacy_setting,
-      trip.note,
-      trip.photo,
-    ],
-  );
+export async function insertTrip(
+  trip: {
+    user_id: number;
+    name: string;
+    destination?: string;
+    start_date?: Date;
+    end_date?: Date;
+    budget?: number;
+    type?: string;
+    privacy_setting: string;
+    note?: string;
+    photo?: string;
+  },
+  transaction?: PoolClient,
+) {
+  const query = `
+  INSERT INTO trips (user_id, name, destination, start_date, end_date, budget, type, privacy_setting, note, photo)
+  VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`;
+
+  const bindParams = [
+    trip.user_id,
+    trip.name,
+    trip.destination,
+    trip.start_date,
+    trip.end_date,
+    trip.budget,
+    trip.type,
+    trip.privacy_setting,
+    trip.note,
+    trip.photo,
+  ];
+
+  const results = await (transaction ?? pool).query(query, bindParams);
+
   const tripId = results.rows[0].id;
   if (tripId) return tripId;
   throw new Error('Insert trip failed');
@@ -112,25 +117,15 @@ export async function selectCompleteTripInfo(id: number) {
   return (trip?.json_build_object as Trip) || null;
 }
 
-export async function insertAttendee(userId: number, tripId: number, role?: string) {
-  let results;
-  if (role) {
-    results = await pool.query(
-      `
-      INSERT INTO attendees (trip_id, user_id, role) 
-      VALUES ($1, $2, $3) RETURNING user_id
-      `,
-      [tripId, userId, role],
-    );
-  } else {
-    results = await pool.query(
-      `
+export async function insertAttendee(userId: number, tripId: number, transaction?: PoolClient) {
+  const results = await (transaction ?? pool).query(
+    `
       INSERT INTO attendees (trip_id, user_id) 
       VALUES ($1, $2) RETURNING user_id
       `,
-      [tripId, userId],
-    );
-  }
+    [tripId, userId],
+  );
+
   const result = results.rows[0];
   if (result) return result;
   throw new Error('Insert new attendee failed');
@@ -164,7 +159,7 @@ export async function selectTripsByUserId(userId: number, isPrivateTrip: boolean
   return results.rows;
 }
 
-export async function selectSavedTripsByUserId(userId: number) {
+export async function selectSavedTripsByUserId(userId: number): Promise<Trip[]> {
   const results = await pool.query(
     `
     SELECT
@@ -228,7 +223,7 @@ export async function updateTrip(trip: {
   return results.rows;
 }
 
-export async function selectPrivacyByTripId(tripId: number) {
+export async function selectPrivacyByTripId(tripId: number): Promise<string> {
   const results = await pool.query(
     `
     SELECT privacy_setting FROM trips
@@ -344,7 +339,7 @@ export async function updateTripClickCount(tripId: number) {
   return results.rows;
 }
 
-export async function deleteFromTripsTripId(tripId: number) {
+export async function deleteFromTripsByTripId(tripId: number) {
   const results = await pool.query(
     `
     DELETE FROM trips
@@ -352,5 +347,31 @@ export async function deleteFromTripsTripId(tripId: number) {
   `,
     [tripId],
   );
-  return results.rows;
+  return results.rowCount ?? 0;
+}
+
+export async function insertSavedTrip(userId: number, tripId: number) {
+  const results = await pool.query(
+    `
+    INSERT INTO saved_trips (user_id, trip_id)
+    VALUES ($1, $2)
+    RETURNING trip_id
+  `,
+    [userId, tripId],
+  );
+  const result = results.rows[0];
+  if (result) return result;
+  throw new Error('Insert trip save failed');
+}
+
+export async function deleteSavedTrip(userId: number, tripId: number) {
+  const command = await pool.query(
+    `
+    DELETE FROM saved_trips WHERE user_id = $1 AND trip_id = $2
+    `,
+    [userId, tripId],
+  );
+
+  if (command.rowCount === 0) return false;
+  return true;
 }

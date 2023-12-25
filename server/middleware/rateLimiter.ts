@@ -6,6 +6,7 @@ const WINDOW = Number(process.env.RATE_LIMITER_WINDOW) || 60;
 
 async function isQuotaExceeded(token: string) {
   const cache = getCacheInstance();
+  if (!cache) return false;
   const results = await cache.multi().set(token, 0, 'EX', WINDOW, 'NX').incr(token).exec();
   const count = results?.[1][1];
   return typeof count === 'number' && count > QUOTA;
