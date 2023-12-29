@@ -116,11 +116,11 @@ const Comment = () => {
           setComments(json.data);
         }
       });
-  }, []);
+  }, [tripId]);
 
   useEffect(() => {
     fetchComments();
-  }, []);
+  }, [fetchComments]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('zh-TW', {
