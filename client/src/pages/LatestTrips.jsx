@@ -21,7 +21,6 @@ const LatestTrips = () => {
   };
 
   const fetchTrip = useCallback(() => {
-    console.log('fetchTrip');
     fetch(
       `${
         import.meta.env.VITE_BACKEND_HOST
@@ -29,7 +28,6 @@ const LatestTrips = () => {
     )
       .then((res) => res.json())
       .then((json) => {
-        console.log(json);
         setNextPage(json.nextPage);
         setTrips((prevTrips) => [...prevTrips, ...json.data]);
       });

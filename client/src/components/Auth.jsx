@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 const Auth = () => {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@test.com');
+  const [password, setPassword] = useState('Test1234');
 
   const navigate = useNavigate();
 
@@ -139,6 +139,7 @@ const Auth = () => {
                 autoComplete="email"
                 autoCorrect="off"
                 id="login-email"
+                defaultValue={email}
                 required
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -149,6 +150,7 @@ const Auth = () => {
                 type="password"
                 name="password"
                 id="login-password"
+                defaultValue={password}
                 required
                 onChange={(e) => setPassword(e.target.value)}
               />
