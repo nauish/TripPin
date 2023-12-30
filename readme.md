@@ -17,6 +17,7 @@
 + [Main Features](https://github.com/nauish/TripPin?tab=readme-ov-file#main-features)
 + [Tech Stack](https://github.com/nauish/TripPin?tab=readme-ov-file#tech-stacks)
 + [System Design](https://github.com/nauish/TripPin?tab=readme-ov-file#system-design)
++ [Database Schema](https://github.com/nauish/TripPin?tab=readme-ov-file#database-schema)
 
 ## Why use TripPin?
 
@@ -38,9 +39,9 @@ TripPin aims to make the process of planning a trip easier and more enjoyable. Y
 - Ask for optimized route
   ![動畫1](https://github.com/nauish/TripPin/assets/101254647/7949eef3-d215-4996-b0f1-c4a389b4ae47)
 - Add checklists and items, set complete status to track your to-dos
-  ![動畫1](https://github.com/nauish/TripPin/assets/101254647/d383d981-b15e-46d4-a6b9-d3ea530acee1)
+  ![動畫2](https://github.com/nauish/TripPin/assets/101254647/d383d981-b15e-46d4-a6b9-d3ea530acee1)
 - Share plans with friends, or make public for others to see and use.
-  ![動畫2](https://github.com/nauish/TripPin/assets/101254647/6081d97e-b71d-4c3e-b26d-8c7a5afe2def)
+  ![動畫3](https://github.com/nauish/TripPin/assets/101254647/6081d97e-b71d-4c3e-b26d-8c7a5afe2def)
 - Chat with an AI assistant who can help them with planning, and answer questions.
 - Add comments on other's trip and share ratings.
 - Collaborate with travel mates in real-time.
@@ -102,3 +103,6 @@ TripPin aims to make the process of planning a trip easier and more enjoyable. Y
 
 ## System Design
 ![tpi drawio (1)](https://github.com/nauish/TripPin/assets/101254647/3ad05230-00eb-418c-a9fa-3e92b5f1a8da)
+
+## Database Schema
+![drawSQL-trippin-export-2023-12-30](https://github.com/nauish/TripPin/assets/101254647/87f1e5e0-6571-44aa-bc24-fe5953ec896a)
