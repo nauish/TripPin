@@ -167,8 +167,8 @@ export async function copyTrip(req: Request, res: Response) {
     const [oldTrip] = await selectTripById(+tripId);
     const oldTripPlaces = await selectPlacesByTripId(+tripId);
     const newTripId = await insertTrip({
-      user_id: userId,
       ...oldTrip,
+      user_id: +userId,
     });
     oldTripPlaces.forEach(async (place) => {
       await insertPlace({
