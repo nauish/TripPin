@@ -65,7 +65,7 @@ const PlaceItem = ({
     return () => {
       socket && socket.off('newEditLock');
     };
-  }, [socket]);
+  }, [socket, place]);
 
   useEffect(() => {
     let intervalId;
