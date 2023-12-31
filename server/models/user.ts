@@ -77,7 +77,7 @@ export async function selectTripsAttendedByUser(userId: number): Promise<Trip[]>
     SELECT t.id, t.name, t.destination, t.start_date, t.end_date, t.budget, t.type, t.privacy_setting, t.note, t.photo
     FROM trips t
     JOIN attendees a ON t.id = a.trip_id
-    WHERE a.user_id = $1 and t.user_id != $1
+    WHERE a.user_id = $1 AND t.user_id != $1
     `,
     [userId],
   );
