@@ -70,7 +70,7 @@ const Comment = () => {
         return;
       }
 
-      toast.success(json.data);
+      toast.success('新增評論成功');
       fetchComments();
     } catch (err) {
       console.log(err);
