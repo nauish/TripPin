@@ -896,7 +896,6 @@ const PlacesMaps = () => {
             className="absolute top-[10px] left-[185px] text-lg text-gray-700 rounded-none bg-white shadow-md  hover:bg-gray-200 z-10 py-2 px-4"
             onClick={() => {
               setIsMapVisible(!isMapVisible);
-
               setSize(window.innerWidth);
             }}
           >
