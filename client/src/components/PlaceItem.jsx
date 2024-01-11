@@ -125,6 +125,7 @@ const PlaceItem = ({
       name: user.name,
       placeId: place.id,
     });
+    socket && socket.emit('addNewPlaceToTrip', { room: tripId });
     setOpen(false);
     fetchPlaces();
   };
