@@ -74,7 +74,12 @@ router
 router
   .route('/v1/trips/:tripId/comments')
   .get([getComments])
-  .post([upload.fields([{ name: 'photos', maxCount: 5 }]), authenticateJWT, postComment]);
+  .post([
+    authenticateJWT,
+    checkTripAttendeesOptional,
+    upload.fields([{ name: 'photos', maxCount: 5 }]),
+    postComment,
+  ]);
 router
   .route('/v1/trips/:tripId/checklists')
   .get([authenticateJWTOptional, checkTripAttendeesOptional, getChecklists])

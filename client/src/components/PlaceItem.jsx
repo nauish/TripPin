@@ -61,11 +61,7 @@ const PlaceItem = ({
         setOpen(true);
       }
     });
-
-    return () => {
-      socket && socket.off('newEditLock');
-    };
-  }, [socket]);
+  }, [socket, place]);
 
   useEffect(() => {
     let intervalId;
@@ -123,7 +119,7 @@ const PlaceItem = ({
   };
 
   const handleSubmit = async () => {
-    updateData(formData, place.id);
+    await updateData(formData, place.id);
     socket.emit('newEditUnlock', {
       room: tripId,
       name: user.name,
@@ -261,7 +257,23 @@ const PlaceItem = ({
                   看地圖
                 </Button>
 
-                <Dialog open={open} onOpenChange={setOpen}>
+                <Dialog
+                  open={open}
+                  onOpenChange={() => {
+                    if (!open) {
+                      setOpen(true);
+                      return;
+                    }
+
+                    socket.emit('newEditUnlock', {
+                      room: tripId,
+                      name: user.name,
+                      placeId: place.id,
+                    });
+
+                    setOpen(false);
+                  }}
+                >
                   <Button
                     variant="ghost"
                     className="text-gray-500 hover:text-gray-700 w-full"
