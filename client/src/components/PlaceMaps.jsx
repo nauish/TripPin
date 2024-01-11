@@ -162,6 +162,7 @@ const PlacesMaps = () => {
           prev.filter((lock) => lock.userId !== payload.userId),
         );
       });
+      socket.on('addNewPlaceToTrip', () => fetchPlaces());
     } catch (error) {
       console.log(error);
     }
@@ -292,7 +293,6 @@ const PlacesMaps = () => {
       setGeometry(geometryLib);
 
       if (!socket) return;
-      socket.on('addNewPlaceToTrip', () => fetchPlaces());
       socket.on('getMarker', (data) => {
         toast.info('有人送來地點');
         new Marker({
@@ -557,8 +557,6 @@ const PlacesMaps = () => {
         });
         sourceList.places = reorderedList;
         updateItemOrders(sourceList.places);
-
-        socket && socket.emit('addNewPlaceToTrip', { room: tripId });
       } else {
         // Move the card between lists
         const [movedPlace] = sourceList.places.splice(source.index, 1);
@@ -582,28 +580,35 @@ const PlacesMaps = () => {
     }
   };
 
-  const updateItemOrders = (list) => {
-    const newOrder = list.map((place) => ({
-      order: place.order,
-      id: place.id,
-    }));
+  const updateItemOrders = async (list) => {
+    try {
+      const newOrder = list.map((place) => ({
+        order: place.order,
+        id: place.id,
+      }));
 
-    fetch(`${TRIP_API_URL}/places/orders`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization,
-      },
-      body: JSON.stringify(newOrder),
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        if (json.error) {
-          toast(json.error);
-          return;
-        }
-        fetchPlaces();
+      const response = await fetch(`${TRIP_API_URL}/places/orders`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization,
+        },
+        body: JSON.stringify(newOrder),
       });
+
+      const json = await response.json();
+
+      if (json.error) {
+        toast(json.error);
+        return;
+      }
+
+      await fetchPlaces();
+
+      if (socket) socket.emit('addNewPlaceToTrip', { room: tripId });
+    } catch (error) {
+      console.error('Error updating item orders:', error);
+    }
   };
 
   const updateData = async (data, placeId) => {
@@ -616,12 +621,8 @@ const PlacesMaps = () => {
         },
         body: JSON.stringify(data),
       });
-
-      if (response.status === 200) {
-        socket && socket.emit('addNewPlaceToTrip', { room: tripId });
-        return true;
-      } else {
-        const json = await response.json();
+      if (!response.ok) {
+        throw new Error('Update failed');
       }
     } catch (error) {
       console.log(error);
