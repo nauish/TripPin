@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
@@ -113,7 +113,7 @@ const PlacesMaps = () => {
     };
   }, []);
 
-  const fetchAttendees = async () => {
+  const fetchAttendees = useCallback(async () => {
     if (!user) return;
     try {
       const response = await fetch(`${TRIP_API_URL}/attendees`, {
@@ -161,12 +161,11 @@ const PlacesMaps = () => {
         setLockedPlaces((prev) =>
           prev.filter((lock) => lock.userId !== payload.userId),
         );
-        console.log(lockedPlaces);
       });
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
 
   const fetchPlaces = async () => {
     try {
@@ -623,7 +622,6 @@ const PlacesMaps = () => {
         return true;
       } else {
         const json = await response.json();
-        console.log(json);
       }
     } catch (error) {
       console.log(error);
