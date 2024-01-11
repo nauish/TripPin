@@ -61,10 +61,6 @@ const PlaceItem = ({
         setOpen(true);
       }
     });
-
-    return () => {
-      socket && socket.off('newEditLock');
-    };
   }, [socket, place]);
 
   useEffect(() => {
